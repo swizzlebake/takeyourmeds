@@ -132,3 +132,49 @@ class MedsDoseRangeAdapter extends TypeAdapter<MedsDoseRange> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class ActiveMedsAdapter extends TypeAdapter<ActiveMeds> {
+  @override
+  final typeId = 4;
+
+  @override
+  ActiveMeds read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return ActiveMeds(
+      id: fields[0] as String,
+      dose: fields[1] as DosePreset,
+      takenAt: fields[2] as DateTime,
+      remindAt: fields[3] as DateTime,
+      remindAgainAt: fields[4] as DateTime,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, ActiveMeds obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.dose)
+      ..writeByte(2)
+      ..write(obj.takenAt)
+      ..writeByte(3)
+      ..write(obj.remindAt)
+      ..writeByte(4)
+      ..write(obj.remindAgainAt);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ActiveMedsAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}

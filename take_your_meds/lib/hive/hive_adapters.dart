@@ -6,5 +6,6 @@ import 'package:take_your_meds/meds.dart';
   AdapterSpec<Meds>(),
   AdapterSpec<DosePreset>(),
   AdapterSpec<MedsDoseRange>(),
+  AdapterSpec<ActiveMeds>(),
 ])
 part 'hive_adapters.g.dart';

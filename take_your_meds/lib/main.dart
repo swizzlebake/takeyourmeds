@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:take_your_meds/navigation.dart';
 
 import 'db.dart';
+import 'home.dart';
+import 'notifications.dart';
 
 void main() async {
   await Database.init();
+  await Notifications.init();
   var app = MyApp();
   runApp(app);
 }
@@ -18,9 +20,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: Scaffold(
-        body: Text('Take Your Meds'),
-        bottomNavigationBar: TYMNavigation(pageIndex: 0),
+      home: Home(
+        doses: Database.cachedDoses,
+        activeMeds: List.empty(growable: true),
       ),
     );
   }

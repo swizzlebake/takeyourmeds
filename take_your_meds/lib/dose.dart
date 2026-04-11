@@ -1,8 +1,6 @@
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_ce/hive_ce.dart';
 import 'db.dart';
 import 'meds.dart';
 import 'navigation.dart';
@@ -219,17 +217,19 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
           ),
           ElevatedButton(
             onPressed: () {
+              var dosePreset = DosePreset(
+                id: UniqueKey().toString(),
+                name: dose.toString(),
+                meds: selectedMed,
+                dosage: dose,
+              );
               setState(() {
                 doses.add(
-                  DosePreset(
-                    id: UniqueKey().toString(),
-                    name: dose.toString(),
-                    meds: selectedMed,
-                    dosage: dose,
-                  ),
+                  dosePreset,
                 );
               });
               Database.saveDoses(doses);
+              widget.dosePresetChangedCallback(dosePreset);
             },
             child: Text('Save Dose'),
           ),

@@ -7,6 +7,7 @@ import 'package:take_your_meds/hive/hive_adapters.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
+    registerAdapter(ActiveMedsAdapter());
     registerAdapter(DosePresetAdapter());
     registerAdapter(MedsAdapter());
     registerAdapter(MedsDoseRangeAdapter());
@@ -15,6 +16,7 @@ extension HiveRegistrar on HiveInterface {
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
+    registerAdapter(ActiveMedsAdapter());
     registerAdapter(DosePresetAdapter());
     registerAdapter(MedsAdapter());
     registerAdapter(MedsDoseRangeAdapter());

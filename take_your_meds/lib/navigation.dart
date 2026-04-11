@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:take_your_meds/home.dart';
 import 'db.dart';
 import 'meds.dart';
 import 'dose.dart';
@@ -35,9 +36,9 @@ class _TYMNavigationState extends State<TYMNavigation> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => Scaffold(
-                bottomNavigationBar: TYMNavigation(pageIndex: 0),
-                body: Text('Take Your Meds'),
+              builder: (context) => Home(
+                doses: Database.cachedDoses,
+                activeMeds: Database.cachedActiveMeds,
               ),
             ),
           );

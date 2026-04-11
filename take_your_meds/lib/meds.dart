@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_ce/hive_ce.dart';
+import 'package:take_your_meds/dose.dart';
 import 'db.dart';
 import 'navigation.dart';
 
@@ -17,6 +17,22 @@ class Meds {
   final String id;
   final MedsDoseRange range;
   final int duration; //hours
+}
+
+class ActiveMeds {
+  ActiveMeds({
+    required this.id,
+    required this.dose,
+    required this.takenAt,
+    required this.remindAt,
+    required this.remindAgainAt,
+  });
+
+  final String id;
+  final DosePreset dose;
+  final DateTime takenAt;
+  final DateTime remindAt;
+  final DateTime remindAgainAt;
 }
 
 typedef MedsChangedCallback = void Function(Meds meds);
@@ -44,11 +60,11 @@ class MedsCard extends StatelessWidget {
                 'Med ${meds.name} dose range: ${meds.range.name} duration ${meds.duration} hours',
                 style: TextStyle(color: Colors.black),
               ),
-              Spacer(),
+              Expanded(child:
               ElevatedButton(
                 onPressed: () => medsRemovedCallback(meds),
-                child: Text("Del"),
-              ),
+                child: Text("X"),
+              )),
             ],
           ),
         ),
