@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:take_your_meds/home.dart';
+import 'package:take_your_meds/notifications.dart';
 import 'db.dart';
 import 'meds.dart';
 import 'dose.dart';
@@ -39,6 +40,7 @@ class _TYMNavigationState extends State<TYMNavigation> {
               builder: (context) => Home(
                 doses: Database.cachedDoses,
                 activeMeds: Database.cachedActiveMeds,
+                location: Notifications.location,
               ),
             ),
           );
@@ -47,7 +49,10 @@ class _TYMNavigationState extends State<TYMNavigation> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => MedsOverview(meds: Database.cachedMeds),
+              builder: (context) => MedsOverview(
+                meds: Database.cachedMeds,
+                doses: Database.cachedDoses,
+              ),
             ),
           );
         }

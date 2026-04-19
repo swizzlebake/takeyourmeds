@@ -63,7 +63,7 @@ class MedsAdapter extends TypeAdapter<Meds> {
       name: fields[0] as String,
       id: fields[1] as String,
       range: fields[2] as MedsDoseRange,
-      duration: (fields[3] as num).toInt(),
+      duration: fields[3] as Duration,
     );
   }
 
@@ -145,6 +145,7 @@ class ActiveMedsAdapter extends TypeAdapter<ActiveMeds> {
     };
     return ActiveMeds(
       id: fields[0] as String,
+      meds: fields[5] as Meds,
       dose: fields[1] as DosePreset,
       takenAt: fields[2] as DateTime,
       remindAt: fields[3] as DateTime,
@@ -155,7 +156,7 @@ class ActiveMedsAdapter extends TypeAdapter<ActiveMeds> {
   @override
   void write(BinaryWriter writer, ActiveMeds obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -165,7 +166,9 @@ class ActiveMedsAdapter extends TypeAdapter<ActiveMeds> {
       ..writeByte(3)
       ..write(obj.remindAt)
       ..writeByte(4)
-      ..write(obj.remindAgainAt);
+      ..write(obj.remindAgainAt)
+      ..writeByte(5)
+      ..write(obj.meds);
   }
 
   @override

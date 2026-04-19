@@ -39,7 +39,7 @@ types:
         index: 2
   ActiveMeds:
     typeId: 4
-    nextIndex: 5
+    nextIndex: 6
     fields:
       id:
         index: 0
@@ -51,3 +51,5 @@ types:
         index: 3
       remindAgainAt:
         index: 4
+      meds:
+        index: 5

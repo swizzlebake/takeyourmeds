@@ -20,7 +20,6 @@ class Database {
       'dose',
       'timers',
     }, path: './tym');
-
     Hive.registerAdapters();
     medsBox = await boxCollection.openBox('meds');
     doseBox = await boxCollection.openBox('dose');

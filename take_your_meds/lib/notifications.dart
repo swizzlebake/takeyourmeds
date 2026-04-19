@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:alarm/alarm.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:take_your_meds/meds.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/tzdata.dart';
 
 class Notifications {
   static final AndroidInitializationSettings androidInitializationSettings =
@@ -18,19 +20,27 @@ class Notifications {
         linux: linuxInitializationSettings,
       );
 
+  static late tz.Location location;
+
   static Future<void> init() async {
     plugin = FlutterLocalNotificationsPlugin();
     tz.initializeTimeZones();
 
-    final android = AndroidFlutterLocalNotificationsPlugin();
-    await android.requestNotificationsPermission();
-    await android.requestExactAlarmsPermission();
+    if (Platform.isAndroid) {
+      final android = AndroidFlutterLocalNotificationsPlugin();
+      await android.requestNotificationsPermission();
+      await android.requestExactAlarmsPermission();
+    }
 
     await plugin.initialize(
-      initializationSettings(),
+      settings: initializationSettings(),
       onDidReceiveNotificationResponse: (NotificationResponse notification) =>
           print('woo'),
     );
+
+    location = await getLocation();
+
+    await Alarm.init();
   }
 
   static Future<String?> getLinuxTimeZoneName() async {
@@ -55,7 +65,50 @@ class Notifications {
     return null;
   }
 
+  static Future<void> scheduleAlarm(ActiveMeds meds) async {
+    var scheduledDate = await getScheduledDate(meds);
+    final alarmSettings = AlarmSettings(
+      id: 1985,
+      dateTime: scheduledDate,
+      volumeSettings: VolumeSettings.fixed(volume: 0.5, volumeEnforced: false),
+      loopAudio: true,
+      vibrate: true,
+      androidStopAlarmOnTermination: false,
+      notificationSettings: NotificationSettings(
+        title: 'Take Your Meds',
+        body: 'It\'s time to take your meds!',
+        stopButton: 'Take Meds',
+        icon: 'app_icon',
+      ),
+    );
+
+    await Alarm.set(alarmSettings: alarmSettings);
+  }
+
   static Future<void> scheduleNotification(ActiveMeds meds) async {
+    var scheduledDate = await getScheduledDate(meds);
+    var notificationDetails = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'tym',
+        'tym',
+        channelDescription: 'take your meds',
+        icon: 'app_icon',
+      ),
+      linux: LinuxNotificationDetails(category: LinuxNotificationCategory.im),
+    );
+    if (Platform.isAndroid) {
+      plugin.zonedSchedule(
+        id: 0,
+        title: 'Take Your Meds!',
+        payload: 'It\'s time to take your meds!',
+        scheduledDate: scheduledDate,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exact,
+      );
+    }
+  }
+
+  static Future<tz.TZDateTime> getScheduledDate(ActiveMeds meds) async {
     String timeZoneName = '';
     if (Platform.isAndroid) {
       var timezone = await FlutterTimezone.getLocalTimezone();
@@ -70,24 +123,26 @@ class Notifications {
       meds.remindAt,
       tz.getLocation(timeZoneName),
     );
-    var notificationDetails = NotificationDetails(
-      android: AndroidNotificationDetails(
-        'tym',
-        'tym',
-        channelDescription: 'take your meds',
-        icon: 'app_icon'
-      ),
-      linux: LinuxNotificationDetails(category: LinuxNotificationCategory.im),
-    );
-    plugin.zonedSchedule(
-      0,
-      'Take Your Meds!',
-      'It\'s time to take your meds!',
-      scheduledDate,
-      notificationDetails,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      androidScheduleMode: AndroidScheduleMode.exact,
-    );
+    return scheduledDate;
+  }
+
+  static Future<String> getTimeZoneName() async {
+    String timeZoneName = '';
+    if (Platform.isAndroid) {
+      var timezone = await FlutterTimezone.getLocalTimezone();
+      timeZoneName = timezone.identifier;
+    } else if (Platform.isLinux) {
+      var name = await getLinuxTimeZoneName();
+      if (name != null) {
+        timeZoneName = name;
+      }
+    }
+
+    return timeZoneName;
+  }
+
+  static Future<tz.Location> getLocation() async {
+    var name = await getTimeZoneName();
+    return tz.getLocation(name);
   }
 }
