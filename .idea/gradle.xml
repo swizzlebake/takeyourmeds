@@ -19,9 +19,14 @@
         <option name="gradleJvm" value="21" />
         <option name="modules">
           <set>
-            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/alarm-5.2.1/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_fgbg-0.7.1/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_keyboard_visibility-6.0.0/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_local_notifications-21.0.0/android" />
             <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/flutter_timezone-5.0.2/android" />
-            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/path_provider_android-2.2.23/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/jni-1.0.0/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/jni_flutter-1.0.1/android" />
+            <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.23/android" />
             <option value="$PROJECT_DIR$/take_your_meds/android" />
             <option value="$PROJECT_DIR$/take_your_meds/android/app" />
             <option value="$USER_HOME$/flutter/packages/flutter_tools/gradle" />

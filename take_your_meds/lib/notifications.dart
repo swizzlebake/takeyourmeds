@@ -1,12 +1,11 @@
 import 'dart:io';
-
 import 'package:alarm/alarm.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:take_your_meds/meds.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/tzdata.dart';
+import 'meds.dart';
 
 class Notifications {
   static final AndroidInitializationSettings androidInitializationSettings =
@@ -82,7 +81,12 @@ class Notifications {
       ),
     );
 
-    await Alarm.set(alarmSettings: alarmSettings);
+    try {
+      await Alarm.set(alarmSettings: alarmSettings);
+      
+    }catch(error) {
+      debugPrint('Could not set alarm');
+    }
   }
 
   static Future<void> scheduleNotification(ActiveMeds meds) async {

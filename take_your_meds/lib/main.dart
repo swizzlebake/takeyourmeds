@@ -1,11 +1,10 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:take_your_meds/time.dart';
 
 import 'db.dart';
 import 'home.dart';
 import 'notifications.dart';
+import 'time.dart';
 
 void main() async {
   await Database.init();

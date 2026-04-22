@@ -30,7 +30,7 @@ class Meds {
 
   Meds.none()
     : name = 'None',
-      id = 'none',
+      id = UniqueKey().toString(),
       range = MedsDoseRange.ug,
       duration = Duration();
 }
@@ -63,6 +63,10 @@ class ActiveMeds {
         Duration(minutes: Settings.remindAgainAtFrequencyInMins.currentValue),
       );
 
+  @override
+  bool operator ==(Object other) => identical(this, other) || other is ActiveMeds && other.id == id;
+
+
   final String id;
   final Meds meds;
   final DosePreset dose;
@@ -73,6 +77,10 @@ class ActiveMeds {
   String getLabel() {
     return '${meds.name} ${dose.dosage}${dose.range.name} ${DateFormat.Hm().format(TZDateTime.from(remindAt, Notifications.location))}';
   }
+
+  @override
+  int get hashCode => id.hashCode;
+
 }
 
 enum TakeMedsTimerResolution { none, keepReminder, clearReminder }
@@ -171,13 +179,15 @@ class _MedsOverviewState extends State<MedsOverview> {
   _MedsOverviewState();
 
   List<Meds> meds = List.empty(growable: true);
-  Meds? editMeds = null;
+  List<DosePreset> doses = List.empty(growable: true);
+  Meds? editMeds;
   final FocusNode focusNode = FocusNode();
   @override
   void initState() {
     super.initState();
 
     meds.addAll(widget.meds);
+    doses.addAll(widget.doses);
   }
 
   @override
@@ -210,7 +220,7 @@ class _MedsOverviewState extends State<MedsOverview> {
                             this.editMeds = editMeds;
                           });
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if(mounted) {
+                            if (mounted) {
                               focusNode.requestFocus();
                             }
                           });
@@ -218,8 +228,12 @@ class _MedsOverviewState extends State<MedsOverview> {
                         medsRemovedCallback: (delMeds) {
                           setState(() {
                             meds.remove(delMeds);
+                            doses.removeWhere(
+                              (dose) => dose.meds.id == delMeds.id,
+                            );
                           });
                           Database.saveMeds(meds);
+                          Database.saveDoses(doses);
                         },
                       );
                     },
@@ -281,7 +295,7 @@ class CreateMedsWidget extends StatefulWidget {
 class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   _CreateMedsWidgetState();
   var meds = Meds.none();
-
+  var editMeds = Meds.none();
   String nameText = '';
   MedsDoseRange doseRange = MedsDoseRange.mg;
   int durationHours = 0;
@@ -295,38 +309,65 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   @override
   void initState() {
     super.initState();
+    editMeds = widget.editMeds ?? Meds.none();
   }
 
   @override
   void dispose() {
     nameController.dispose();
+    hoursController.dispose();
+    minsController.dispose();
     super.dispose();
   }
 
   @override
-  void didUpdateWidget(covariant CreateMedsWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
+  void didUpdateWidget(covariant CreateMedsWidget oldHome) {
+    super.didUpdateWidget(oldHome);
 
-    if (widget.editMeds != null && widget.editMeds != oldWidget.editMeds) {
-      meds = widget.editMeds!;
-      nameText = meds.name;
-      doseRange = meds.range;
-      durationMins = meds.duration.inMinutes % 60;
-      durationHours = meds.duration.inHours;
-      nameController.text = nameText;
-      hoursController.text = durationHours.toString();
-      minsController.text = durationMins.toString();
+    if (widget.editMeds != null && widget.editMeds != oldHome.editMeds) {
+      editMeds = widget.editMeds!;
+      meds = editMeds;
+      updateFields();
     }
-
   }
+
+  void updateFields() {
+    nameText = meds.name;
+    doseRange = meds.range;
+    durationMins = meds.duration.inMinutes % 60;
+    durationHours = meds.duration.inHours;
+    nameController.text = nameText;
+    hoursController.text = durationHours.toString();
+    minsController.text = durationMins.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
+    var buttons = List<Widget>.empty(growable: true);
+
+    buttons.add(
+      ElevatedButton(
+        onPressed: () {
+          setState(() {
+            meds = Meds.none();
+          });
+          updateFields();
+        },
+        child: Text(widget.editMeds != null ? 'Cancel' : 'Clear'),
+      ),
+    );
+    buttons.add(
+      ElevatedButton(
+        onPressed: onAddPressed,
+        child: Text(widget.editMeds != null ? 'Save Meds' : 'Add Meds'),
+      ),
+    );
     return Card.filled(
       child: Column(
         spacing: 10,
         children: <Widget>[
           Text(
-            'Add New Meds',
+            widget.editMeds != null ? 'Edit Meds' : 'Add New Meds',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           SizedBox(
@@ -418,7 +459,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
               Text('m'),
             ],
           ),
-          ElevatedButton(onPressed: onAddPressed, child: Text('Add Meds')),
+          ...buttons,
         ],
       ),
     );
@@ -433,7 +474,12 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
 
   void onAddPressed() {
     widget.medsChangedCallback(meds);
-    setState(() {});
+    setState(() {
+      meds = Meds.none();
+      editMeds = Meds.none();
+    });
+
+    updateFields();
   }
 
   void updateState() {
@@ -497,9 +543,9 @@ class _ActiveMedsWidgetState extends State<ActiveMedsWidget> {
     );
 
     color = hsv != null ? hsv.toColor() : Colors.white;
-    return Card(
-      color: color,
+    return GestureDetector(onTap: () => widget.onTap(), child: Card(
+      shadowColor: color,
       child: Center(child: Text(widget.activeMeds.getLabel())),
-    );
+    ));
   }
 }

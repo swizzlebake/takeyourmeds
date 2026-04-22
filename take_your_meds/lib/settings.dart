@@ -15,6 +15,6 @@ class Settings {
 
   // How long we wait between a remindAt and a remindAtAgain
   static Setting remindAgainAtFrequencyInMins = Setting.fromDefault(
-    defaultValue: 5.0,
+    defaultValue: 5,
   );
 }

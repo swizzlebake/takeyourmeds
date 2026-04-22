@@ -120,8 +120,6 @@ class _ConsumeState extends State<Consume> {
   }
 
   void buildTakeMeds() {
-    buildActiveMeds();
-
     var medsToTake = widget.selectedActiveMedsToTake;
     var medsToResolve = widget.selectedActiveMedsToResolve;
     if (medsToTake == null && medsToResolve != null) {

@@ -42,8 +42,20 @@ class _HomeState extends State<Home> {
     activeMeds.sort(
       (ActiveMeds a, ActiveMeds b) => a.takenAt.compareTo(b.takenAt),
     );
+  }
 
-    Time.registerCallback(tick);
+  @override
+  void didUpdateWidget(covariant Home oldHome) {
+    super.didUpdateWidget(oldHome);
+
+    if (widget != oldHome) {
+      doses.clear();
+      doses.addAll(widget.doses);
+      activeMeds.clear();
+      activeMeds.addAll(widget.activeMeds);
+
+      Time.registerCallback(tick);
+    }
   }
 
   void tick() => {
@@ -147,7 +159,7 @@ class _HomeState extends State<Home> {
                 return ActiveMedsWidget(
                   activeMeds: activeMeds[index],
                   location: Notifications.location,
-                  onTap: () => onPressedActiveMeds(activeMeds[index]),
+                  onTap: () async => await onPressedActiveMeds(activeMeds[index]),
                 );
               },
               itemCount: activeMeds.length,
@@ -196,7 +208,7 @@ class _HomeState extends State<Home> {
       return;
     }
     var takeMeds = result as TakeMeds;
-    _handleConsumeResult(takeMeds);
+    await _handleConsumeResult(takeMeds);
   }
 
   Future<void> _handleConsumeResult(TakeMeds takeMeds) async {
@@ -205,10 +217,9 @@ class _HomeState extends State<Home> {
         activeMeds.add(takeMeds.medsToTake);
         activeMeds.remove(takeMeds.medsToResolve);
       });
-
-      await Notifications.scheduleAlarm(takeMeds.medsToTake);
     }
 
     Database.saveActiveMeds(activeMeds);
+    await Notifications.scheduleAlarm(takeMeds.medsToTake);
   }
 }
