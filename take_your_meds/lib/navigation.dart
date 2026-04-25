@@ -44,7 +44,9 @@ class _TYMNavigationState extends State<TYMNavigation> {
         if (currentPageIndex == 2) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const DosePresetsOverview()),
+            MaterialPageRoute(
+              builder: (context) => const DosePresetsOverview(),
+            ),
           );
         }
       },

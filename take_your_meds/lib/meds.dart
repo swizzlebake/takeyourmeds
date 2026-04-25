@@ -33,6 +33,13 @@ class Meds {
       id = UniqueKey().toString(),
       range = MedsDoseRange.ug,
       duration = Duration();
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Meds && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class ActiveMeds {
@@ -53,10 +60,10 @@ class ActiveMeds {
       remindAt = DateTime.fromMillisecondsSinceEpoch(1000),
       remindAgainAt = DateTime.fromMillisecondsSinceEpoch(2000);
 
-  ActiveMeds.fromDose(this.dose)
+  ActiveMeds.fromDose(this.dose, DateTime takenAt)
     : id = UniqueKey().toString(),
       meds = dose.meds,
-      takenAt = DateTime.now().toUtc(),
+      takenAt = takenAt.toUtc(),
       remindAt = Time.getRemindAt(dose.meds.duration),
       remindAgainAt = Time.getRemindAgainAt(
         Time.getRemindAt(dose.meds.duration),

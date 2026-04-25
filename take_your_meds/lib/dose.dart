@@ -29,6 +29,16 @@ class DosePreset {
   String getLabel() {
     return '${meds.name} $dosage${range.name}';
   }
+
+  @override
+  bool operator ==(Object other) {
+    // TODO: implement ==
+    return (other is DosePreset) ? (id == other.id) : false;
+  }
+
+  @override
+  // TODO: implement hashCode
+  int get hashCode => id.hashCode;
 }
 
 typedef DosePresetChangedCallback = void Function(DosePreset meds);
@@ -152,25 +162,24 @@ class CreateDosePresetWidget extends StatefulWidget {
 class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
   List<DropdownMenuItem<Meds>> dropDownItems = List.empty(growable: true);
 
-  late Meds selectedMed;
+  Meds? selectedMed;
   List<DosePreset> doses = List.empty(growable: true);
   int dose = 0;
 
   @override
   void initState() {
     super.initState();
-
     doses.addAll(widget.doses);
+    selectedMed = widget.meds.isNotEmpty ? widget.meds[0] : null;
+  }
 
-    if (widget.meds.isNotEmpty) {
+  @override
+  void didUpdateWidget(CreateDosePresetWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (selectedMed == null && widget.meds.isNotEmpty) {
       selectedMed = widget.meds[0];
-    } else {
-      selectedMed = Meds(
-        name: 'none',
-        id: '',
-        range: MedsDoseRange.mg,
-        duration: Duration(),
-      );
+    } else if (selectedMed != null && !widget.meds.contains(selectedMed)) {
+      selectedMed = widget.meds.isNotEmpty ? widget.meds[0] : null;
     }
   }
 
@@ -224,23 +233,25 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
                     },
                   ),
                 ),
-                Text(selectedMed.range.name),
+                Text(selectedMed?.range.name ?? ''),
               ],
             ),
           ),
           ElevatedButton(
-            onPressed: () {
-              var dosePreset = DosePreset(
-                id: UniqueKey().toString(),
-                name: dose.toString(),
-                meds: selectedMed,
-                dosage: dose,
-              );
-              setState(() {
-                doses.add(dosePreset);
-              });
-              widget.dosePresetChangedCallback(dosePreset);
-            },
+            onPressed: selectedMed == null
+                ? null
+                : () {
+                    final dosePreset = DosePreset(
+                      id: UniqueKey().toString(),
+                      name: dose.toString(),
+                      meds: selectedMed!,
+                      dosage: dose,
+                    );
+                    setState(() {
+                      doses.add(dosePreset);
+                    });
+                    widget.dosePresetChangedCallback(dosePreset);
+                  },
             child: const Text('Save Dose'),
           ),
         ],

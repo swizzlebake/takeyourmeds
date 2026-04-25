@@ -17,8 +17,9 @@ class MedsNotifier extends AsyncNotifier<List<Meds>> {
   }
 }
 
-final medsProvider =
-    AsyncNotifierProvider<MedsNotifier, List<Meds>>(MedsNotifier.new);
+final medsProvider = AsyncNotifierProvider<MedsNotifier, List<Meds>>(
+  MedsNotifier.new,
+);
 
 class DosesNotifier extends AsyncNotifier<List<DosePreset>> {
   @override
@@ -30,8 +31,9 @@ class DosesNotifier extends AsyncNotifier<List<DosePreset>> {
   }
 }
 
-final dosesProvider =
-    AsyncNotifierProvider<DosesNotifier, List<DosePreset>>(DosesNotifier.new);
+final dosesProvider = AsyncNotifierProvider<DosesNotifier, List<DosePreset>>(
+  DosesNotifier.new,
+);
 
 class ActiveMedsNotifier extends AsyncNotifier<List<ActiveMeds>> {
   @override

@@ -83,8 +83,7 @@ class Notifications {
 
     try {
       await Alarm.set(alarmSettings: alarmSettings);
-      
-    }catch(error) {
+    } catch (error) {
       debugPrint('Could not set alarm');
     }
   }

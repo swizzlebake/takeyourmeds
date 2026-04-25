@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:take_your_meds/dose.dart';
 import 'package:take_your_meds/meds.dart';
 import 'package:take_your_meds/providers.dart';
@@ -22,6 +23,7 @@ class _ConsumeState extends ConsumerState<Consume> {
   late TakeMeds takeMeds;
   final List<DropdownMenuEntry<DosePreset>> _doseEntries = [];
   final List<DropdownMenuEntry<ActiveMeds>> _activeMedEntries = [];
+  DateTime takenAt = DateTime.now().toUtc();
 
   @override
   void initState() {
@@ -38,6 +40,36 @@ class _ConsumeState extends ConsumerState<Consume> {
     _buildTakeMeds(doses, activeMeds);
   }
 
+  void _buildTimePicker(BuildContext context) async {
+    var picker = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(takenAt),
+    );
+
+    if (picker != null) {
+      takenAt = DateTime(
+        takenAt.year,
+        takenAt.month,
+        takenAt.day,
+        takenAt.hour,
+        takenAt.minute,
+        takenAt.second,
+      );
+    }
+  }
+
+  Future<void> _buildDatePicker(BuildContext context) async {
+    var dt = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now().toUtc(),
+      lastDate: DateTime.now().toUtc(),
+    );
+
+    if (dt != null) {
+      takenAt = dt;
+    }
+  }
+
   void _buildTakeMeds(List<DosePreset> doses, List<ActiveMeds> activeMeds) {
     var medsToTake = widget.selectedActiveMedsToTake;
     var medsToResolve = widget.selectedActiveMedsToResolve;
@@ -45,7 +77,7 @@ class _ConsumeState extends ConsumerState<Consume> {
     if (medsToTake == null && medsToResolve != null) {
       for (var dose in doses) {
         if (dose.meds.id == medsToResolve.meds.id) {
-          medsToTake = ActiveMeds.fromDose(dose);
+          medsToTake = ActiveMeds.fromDose(dose, takenAt);
           break;
         }
       }
@@ -76,9 +108,10 @@ class _ConsumeState extends ConsumerState<Consume> {
     );
     for (var meds in activeMeds) {
       final cancelWarningDuration = Duration(
-        milliseconds: (meds.remindAt.difference(meds.takenAt).inMilliseconds *
-                Settings.cancelWarningWithConsumePercentage.currentValue)
-            .toInt(),
+        milliseconds:
+            (meds.remindAt.difference(meds.takenAt).inMilliseconds *
+                    Settings.cancelWarningWithConsumePercentage.currentValue)
+                .toInt(),
       );
       final nowDuration = DateTime.now().toUtc().difference(meds.takenAt);
       _activeMedEntries.add(
@@ -112,7 +145,23 @@ class _ConsumeState extends ConsumerState<Consume> {
                 'Time For Meds!',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              const Text('Take Meds'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    child: Text(
+                      'Select Date (${DateFormat.yMd().format(takenAt.toLocal())})',
+                    ),
+                    onPressed: () async => _buildDatePicker(context),
+                  ),
+                  ElevatedButton(
+                    child: Text(
+                      'Select Time (${DateFormat.Hm().format(takenAt.toLocal())})',
+                    ),
+                    onPressed: () async => _buildTimePicker(context),
+                  ),
+                ],
+              ),
               DropdownMenu<DosePreset>(
                 initialSelection: takeMeds.medsToTake.dose,
                 requestFocusOnTap: true,
@@ -122,7 +171,7 @@ class _ConsumeState extends ConsumerState<Consume> {
                 onSelected: (DosePreset? dose) {
                   if (dose == null) return;
                   setState(() {
-                    takeMeds.medsToTake = ActiveMeds.fromDose(dose);
+                    takeMeds.medsToTake = ActiveMeds.fromDose(dose, takenAt);
                   });
                 },
               ),

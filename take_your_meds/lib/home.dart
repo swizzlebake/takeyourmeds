@@ -65,8 +65,11 @@ class Home extends ConsumerWidget {
                 return ActiveMedsWidget(
                   activeMeds: activeMeds[index],
                   location: Notifications.location,
-                  onTap: () async =>
-                      await _onPressedActiveMeds(context, ref, activeMeds[index]),
+                  onTap: () async => await _onPressedActiveMeds(
+                    context,
+                    ref,
+                    activeMeds[index],
+                  ),
                 );
               },
             ),
@@ -77,7 +80,10 @@ class Home extends ConsumerWidget {
     );
   }
 
-  Future<void> _onLongPressActiveMeds(BuildContext context, WidgetRef ref) async {
+  Future<void> _onLongPressActiveMeds(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -127,7 +133,7 @@ class Home extends ConsumerWidget {
       context: context,
       builder: (BuildContext context) {
         return Consume(
-          selectedActiveMedsToTake: ActiveMeds.fromDose(dose),
+          selectedActiveMedsToTake: ActiveMeds.fromDose(dose, DateTime.now().toUtc()),
           selectedActiveMedsToResolve: null,
         );
       },
