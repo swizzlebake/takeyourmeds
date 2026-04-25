@@ -42,6 +42,7 @@ dependencies:
   intl: ^0.20.2
   alarm: ^5.2.1
   flutter_keyboard_visibility: ^6.0.0
+  flutter_riverpod: ^2.6.1
 
 dev_dependencies:
   flutter_test:

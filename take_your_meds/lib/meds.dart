@@ -3,14 +3,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:take_your_meds/dose.dart';
+import 'package:take_your_meds/providers.dart';
 import 'package:take_your_meds/settings.dart';
 import 'package:take_your_meds/time.dart';
 import 'package:timezone/timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/tzdata.dart';
-import 'db.dart';
 import 'navigation.dart';
 import 'notifications.dart';
 
@@ -64,8 +64,8 @@ class ActiveMeds {
       );
 
   @override
-  bool operator ==(Object other) => identical(this, other) || other is ActiveMeds && other.id == id;
-
+  bool operator ==(Object other) =>
+      identical(this, other) || other is ActiveMeds && other.id == id;
 
   final String id;
   final Meds meds;
@@ -80,7 +80,6 @@ class ActiveMeds {
 
   @override
   int get hashCode => id.hashCode;
-
 }
 
 enum TakeMedsTimerResolution { none, keepReminder, clearReminder }
@@ -104,7 +103,6 @@ class TakeMeds {
 }
 
 typedef MedsChangedCallback = void Function(Meds meds);
-typedef SaveMedsCallback = void Function(List<Meds> meds);
 
 class MedsCard extends StatelessWidget {
   const MedsCard({
@@ -118,6 +116,7 @@ class MedsCard extends StatelessWidget {
   final Duration duration;
   final MedsChangedCallback medsTappedCallback;
   final MedsChangedCallback medsRemovedCallback;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -137,26 +136,26 @@ class MedsCard extends StatelessWidget {
                     children: <TextSpan>[
                       TextSpan(
                         text: meds.name,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      TextSpan(text: ' dosage: '),
+                      const TextSpan(text: ' dosage: '),
                       TextSpan(
                         text: meds.range.name,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      TextSpan(text: ' lasts: '),
+                      const TextSpan(text: ' lasts: '),
                       TextSpan(
                         text:
                             '${duration.inHours}h ${duration.inMinutes % 60}m',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
-                    style: TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.black),
                   ),
                 ),
                 ElevatedButton(
                   onPressed: () => medsRemovedCallback(meds),
-                  child: Text("X"),
+                  child: const Text("X"),
                 ),
               ],
             ),
@@ -167,34 +166,25 @@ class MedsCard extends StatelessWidget {
   }
 }
 
-class MedsOverview extends StatefulWidget {
-  const MedsOverview({super.key, required this.meds, required this.doses});
-  final List<Meds> meds;
-  final List<DosePreset> doses;
+class MedsOverview extends ConsumerStatefulWidget {
+  const MedsOverview({super.key});
+
   @override
-  State<StatefulWidget> createState() => _MedsOverviewState();
+  ConsumerState<MedsOverview> createState() => _MedsOverviewState();
 }
 
-class _MedsOverviewState extends State<MedsOverview> {
-  _MedsOverviewState();
-
-  List<Meds> meds = List.empty(growable: true);
-  List<DosePreset> doses = List.empty(growable: true);
+class _MedsOverviewState extends ConsumerState<MedsOverview> {
   Meds? editMeds;
   final FocusNode focusNode = FocusNode();
-  @override
-  void initState() {
-    super.initState();
-
-    meds.addAll(widget.meds);
-    doses.addAll(widget.doses);
-  }
 
   @override
   Widget build(BuildContext context) {
+    final meds = ref.watch(medsProvider).valueOrNull ?? [];
+    final doses = ref.watch(dosesProvider).valueOrNull ?? [];
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Meds List',
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -205,39 +195,35 @@ class _MedsOverviewState extends State<MedsOverview> {
           return Column(
             children: [
               AnimatedSize(
-                duration: Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 300),
                 curve: Curves.ease,
                 child: SizedBox(
                   width: 500,
                   height: isKeyboardVisible ? 50 : 300,
                   child: ListView.builder(
+                    itemCount: meds.length,
                     itemBuilder: (BuildContext context, int index) {
                       return MedsCard(
                         meds: meds[index],
                         duration: meds[index].duration,
-                        medsTappedCallback: (editMeds) {
+                        medsTappedCallback: (tapped) {
                           setState(() {
-                            this.editMeds = editMeds;
+                            editMeds = tapped;
                           });
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              focusNode.requestFocus();
-                            }
+                            if (mounted) focusNode.requestFocus();
                           });
                         },
                         medsRemovedCallback: (delMeds) {
-                          setState(() {
-                            meds.remove(delMeds);
-                            doses.removeWhere(
-                              (dose) => dose.meds.id == delMeds.id,
-                            );
-                          });
-                          Database.saveMeds(meds);
-                          Database.saveDoses(doses);
+                          final updatedMeds = List<Meds>.from(meds)
+                            ..remove(delMeds);
+                          final updatedDoses = List<DosePreset>.from(doses)
+                            ..removeWhere((d) => d.meds.id == delMeds.id);
+                          ref.read(medsProvider.notifier).save(updatedMeds);
+                          ref.read(dosesProvider.notifier).save(updatedDoses);
                         },
                       );
                     },
-                    itemCount: meds.length,
                   ),
                 ),
               ),
@@ -246,18 +232,13 @@ class _MedsOverviewState extends State<MedsOverview> {
                   focusNode: focusNode,
                   editMeds: editMeds,
                   medsChangedCallback: (newMeds) {
+                    final updated = List<Meds>.from(meds)
+                      ..removeWhere((m) => m.id == newMeds.id)
+                      ..add(newMeds);
+                    ref.read(medsProvider.notifier).save(updated);
                     setState(() {
-                      for (var med in meds) {
-                        if (med.id == newMeds.id) {
-                          meds.remove(med);
-                          break;
-                        }
-                      }
-                      meds.add(newMeds);
+                      editMeds = null;
                     });
-                    Database.saveMeds(meds);
-
-                    editMeds = null;
                   },
                 ),
               ),
@@ -265,14 +246,13 @@ class _MedsOverviewState extends State<MedsOverview> {
           );
         },
       ),
-      bottomNavigationBar: TYMNavigation(pageIndex: 1),
+      bottomNavigationBar: const TYMNavigation(pageIndex: 1),
     );
   }
 
   @override
   void dispose() {
     focusNode.dispose();
-    // TODO: implement deactivate
     super.dispose();
   }
 }
@@ -293,7 +273,6 @@ class CreateMedsWidget extends StatefulWidget {
 }
 
 class _CreateMedsWidgetState extends State<CreateMedsWidget> {
-  _CreateMedsWidgetState();
   var meds = Meds.none();
   var editMeds = Meds.none();
   String nameText = '';
@@ -306,6 +285,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController hoursController = TextEditingController();
   final TextEditingController minsController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -343,32 +323,13 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    var buttons = List<Widget>.empty(growable: true);
-
-    buttons.add(
-      ElevatedButton(
-        onPressed: () {
-          setState(() {
-            meds = Meds.none();
-          });
-          updateFields();
-        },
-        child: Text(widget.editMeds != null ? 'Cancel' : 'Clear'),
-      ),
-    );
-    buttons.add(
-      ElevatedButton(
-        onPressed: onAddPressed,
-        child: Text(widget.editMeds != null ? 'Save Meds' : 'Add Meds'),
-      ),
-    );
     return Card.filled(
       child: Column(
         spacing: 10,
         children: <Widget>[
           Text(
             widget.editMeds != null ? 'Edit Meds' : 'Add New Meds',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           SizedBox(
             width: 300,
@@ -379,7 +340,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
               focusNode: widget.focusNode,
               keyboardType: TextInputType.text,
               controller: nameController,
-              decoration: InputDecoration(hintText: 'name'),
+              decoration: const InputDecoration(hintText: 'name'),
               onChanged: (txt) {
                 nameText = txt;
                 updateState();
@@ -411,24 +372,17 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(hintText: hoursHintText),
                   onChanged: (txt) {
-                    final newTxt = txt;
-                    final hasDot = '.'.allMatches(newTxt).length == 1;
-                    final hasComma = ','.allMatches(newTxt).length == 1;
-                    int? tryDuration = 0;
-                    if (hasDot || hasComma) {
-                      return;
-                    }
-
-                    tryDuration = int.tryParse(newTxt);
-                    if (tryDuration != null) {
-                      durationHours = tryDuration;
-                    }
+                    final hasDot = '.'.allMatches(txt).length == 1;
+                    final hasComma = ','.allMatches(txt).length == 1;
+                    if (hasDot || hasComma) return;
+                    final tryDuration = int.tryParse(txt);
+                    if (tryDuration != null) durationHours = tryDuration;
                     updateState();
                   },
                   textAlign: TextAlign.center,
                 ),
               ),
-              Text('h'),
+              const Text('h'),
               SizedBox(
                 width: 100,
                 child: TextField(
@@ -439,36 +393,40 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(hintText: minsHintText),
                   onChanged: (txt) {
-                    final newTxt = txt;
-                    final hasDot = '.'.allMatches(newTxt).length == 1;
-                    final hasComma = ','.allMatches(newTxt).length == 1;
-                    int? tryDuration = 0;
-                    if (hasDot || hasComma) {
-                      return;
-                    }
-
-                    tryDuration = int.tryParse(newTxt);
-                    if (tryDuration != null) {
-                      durationMins = tryDuration;
-                    }
+                    final hasDot = '.'.allMatches(txt).length == 1;
+                    final hasComma = ','.allMatches(txt).length == 1;
+                    if (hasDot || hasComma) return;
+                    final tryDuration = int.tryParse(txt);
+                    if (tryDuration != null) durationMins = tryDuration;
                     updateState();
                   },
                   textAlign: TextAlign.center,
                 ),
               ),
-              Text('m'),
+              const Text('m'),
             ],
           ),
-          ...buttons,
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                meds = Meds.none();
+                editMeds = Meds.none();
+              });
+              updateFields();
+            },
+            child: Text(widget.editMeds != null ? 'Cancel' : 'Clear'),
+          ),
+          ElevatedButton(
+            onPressed: onAddPressed,
+            child: Text(widget.editMeds != null ? 'Save Meds' : 'Add Meds'),
+          ),
         ],
       ),
     );
   }
 
   void updateDoseRangeRadioSelection(MedsDoseRange? range) {
-    if (range != null) {
-      doseRange = range;
-    }
+    if (range != null) doseRange = range;
     updateState();
   }
 
@@ -478,7 +436,6 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
       meds = Meds.none();
       editMeds = Meds.none();
     });
-
     updateFields();
   }
 
@@ -507,7 +464,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   }
 }
 
-class ActiveMedsWidget extends StatefulWidget {
+class ActiveMedsWidget extends StatelessWidget {
   const ActiveMedsWidget({
     super.key,
     required this.activeMeds,
@@ -519,20 +476,9 @@ class ActiveMedsWidget extends StatefulWidget {
   final Function onTap;
 
   @override
-  State<StatefulWidget> createState() => _ActiveMedsWidgetState();
-}
-
-class _ActiveMedsWidgetState extends State<ActiveMedsWidget> {
-  Color color = Colors.white;
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     var t = clampDouble(
-      DateTime.now().difference(widget.activeMeds.remindAt).inSeconds / 30.0,
+      DateTime.now().difference(activeMeds.remindAt).inSeconds / 30.0,
       0,
       1,
     );
@@ -541,11 +487,14 @@ class _ActiveMedsWidgetState extends State<ActiveMedsWidget> {
       HSVColor.fromColor(Colors.yellow),
       t,
     );
+    final color = hsv != null ? hsv.toColor() : Colors.white;
 
-    color = hsv != null ? hsv.toColor() : Colors.white;
-    return GestureDetector(onTap: () => widget.onTap(), child: Card(
-      shadowColor: color,
-      child: Center(child: Text(widget.activeMeds.getLabel())),
-    ));
+    return GestureDetector(
+      onTap: () => onTap(),
+      child: Card(
+        shadowColor: color,
+        child: Center(child: Text(activeMeds.getLabel())),
+      ),
+    );
   }
 }

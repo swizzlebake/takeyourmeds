@@ -1,33 +1,27 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'db.dart';
 import 'home.dart';
 import 'notifications.dart';
-import 'time.dart';
 
 void main() async {
   await Database.init();
   await Notifications.init();
-  Time.init();
-  var app = MyApp();
-  runApp(app);
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: Home(
-        doses: Database.cachedDoses,
-        activeMeds: Database.cachedActiveMeds,
-        location: Notifications.location,
+      title: 'Take Your Meds',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
+      home: const Home(),
     );
   }
 }

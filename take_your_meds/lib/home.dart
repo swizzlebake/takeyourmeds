@@ -1,85 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:take_your_meds/consume.dart';
-import 'package:take_your_meds/db.dart';
 import 'package:take_your_meds/dose.dart';
 import 'package:take_your_meds/meds.dart';
 import 'package:take_your_meds/navigation.dart';
-import 'package:take_your_meds/settings.dart';
-import 'package:take_your_meds/time.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:take_your_meds/providers.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import 'notifications.dart';
 
-class Home extends StatefulWidget {
-  const Home({
-    super.key,
-    required this.doses,
-    required this.activeMeds,
-    required this.location,
-  });
-
-  final List<DosePreset> doses;
-  final List<ActiveMeds> activeMeds;
-  final tz.Location location;
-  @override
-  State<StatefulWidget> createState() => _HomeState();
-}
-
-class _HomeState extends State<Home> {
-  List<DosePreset> doses = List.empty(growable: true);
-  List<ActiveMeds> activeMeds = List.empty(growable: true);
-  DateTime _tick = DateTime.now();
+class Home extends ConsumerWidget {
+  const Home({super.key});
 
   @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tick = ref.watch(tickProvider).valueOrNull ?? DateTime.now();
+    final doses = ref.watch(dosesProvider).valueOrNull ?? [];
+    final activeMeds = List<ActiveMeds>.from(
+      ref.watch(activeMedsProvider).valueOrNull ?? [],
+    )..sort((a, b) => a.takenAt.compareTo(b.takenAt));
 
-    doses.addAll(widget.doses);
-    activeMeds.addAll(widget.activeMeds);
-    activeMeds.sort(
-      (ActiveMeds a, ActiveMeds b) => a.takenAt.compareTo(b.takenAt),
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant Home oldHome) {
-    super.didUpdateWidget(oldHome);
-
-    if (widget != oldHome) {
-      doses.clear();
-      doses.addAll(widget.doses);
-      activeMeds.clear();
-      activeMeds.addAll(widget.activeMeds);
-
-      Time.registerCallback(tick);
-    }
-  }
-
-  void tick() => {
-    setState(() {
-      _tick = DateTime.now();
-    }),
-  };
-
-  @override
-  void deactivate() {
-    // TODO: implement deactivate
-    super.deactivate();
-
-    Time.removeCallback(tick);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Center(
           child: Text(
-            'Available Meds ${DateFormat.Hms().format(tz.TZDateTime.from(_tick, Notifications.location)).toString()}',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            'Available Meds ${DateFormat.Hms().format(tz.TZDateTime.from(tick, Notifications.location))}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -89,137 +36,133 @@ class _HomeState extends State<Home> {
           SizedBox(
             height: 300,
             child: ListView.builder(
+              itemCount: doses.length,
               itemBuilder: (BuildContext context, int index) {
                 return Card(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await onPressedDosePreset(doses[index]);
+                      await _onPressedDosePreset(context, ref, doses[index]);
                     },
                     child: Text(doses[index].getLabel()),
                   ),
                 );
               },
-              itemCount: doses.length,
             ),
           ),
           GestureDetector(
             onLongPress: () async {
-              var clearedActiveMeds = await showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return Center(
-                    child: SizedBox(
-                      height: 200,
-                      width: 200,
-                      child: Card.filled(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Text(
-                              'Clear all?',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(false);
-                                  },
-                                  child: Text('No'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      activeMeds = List.empty(growable: true);
-                                    });
-                                    Database.saveActiveMeds(activeMeds);
-                                    Navigator.of(context).pop(true);
-                                  },
-                                  child: Text('Yes'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
+              await _onLongPressActiveMeds(context, ref);
             },
-            child: Text(
+            child: const Text(
               'Active Meds',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           Flexible(
             child: ListView.builder(
+              itemCount: activeMeds.length,
               itemBuilder: (BuildContext context, int index) {
                 return ActiveMedsWidget(
                   activeMeds: activeMeds[index],
                   location: Notifications.location,
-                  onTap: () async => await onPressedActiveMeds(activeMeds[index]),
+                  onTap: () async =>
+                      await _onPressedActiveMeds(context, ref, activeMeds[index]),
                 );
               },
-              itemCount: activeMeds.length,
             ),
           ),
         ],
       ),
-      bottomNavigationBar: TYMNavigation(pageIndex: 0),
+      bottomNavigationBar: const TYMNavigation(pageIndex: 0),
     );
   }
 
-  Future<void> onPressedDosePreset(DosePreset dose) async {
-    var medsToTake = ActiveMeds.fromDose(dose);
-    var result = await showDialog(
+  Future<void> _onLongPressActiveMeds(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (BuildContext builder) {
+      builder: (BuildContext context) {
+        return Center(
+          child: SizedBox(
+            height: 200,
+            width: 200,
+            child: Card.filled(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  const Text(
+                    'Clear all?',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('No'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Yes'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    if (confirmed == true && context.mounted) {
+      await ref.read(activeMedsProvider.notifier).save([]);
+    }
+  }
+
+  Future<void> _onPressedDosePreset(
+    BuildContext context,
+    WidgetRef ref,
+    DosePreset dose,
+  ) async {
+    final result = await showDialog<TakeMeds>(
+      context: context,
+      builder: (BuildContext context) {
         return Consume(
-          doses: Database.cachedDoses,
-          activeMeds: Database.cachedActiveMeds,
-          selectedActiveMedsToTake: medsToTake,
+          selectedActiveMedsToTake: ActiveMeds.fromDose(dose),
           selectedActiveMedsToResolve: null,
         );
       },
     );
-    if (result == null) {
-      return;
-    }
-    var takeMeds = result as TakeMeds;
-    _handleConsumeResult(takeMeds);
+    if (result == null || !context.mounted) return;
+    await _handleConsumeResult(ref, result);
   }
 
-  Future<void> onPressedActiveMeds(ActiveMeds meds) async {
-    var result = await showDialog(
+  Future<void> _onPressedActiveMeds(
+    BuildContext context,
+    WidgetRef ref,
+    ActiveMeds meds,
+  ) async {
+    final result = await showDialog<TakeMeds>(
       context: context,
-      builder: (BuildContext builder) {
-        var consume = Consume(
-          doses: Database.cachedDoses,
-          activeMeds: Database.cachedActiveMeds,
+      builder: (BuildContext context) {
+        return Consume(
           selectedActiveMedsToTake: null,
           selectedActiveMedsToResolve: meds,
         );
-        return consume;
       },
     );
-    if (result == null) {
-      return;
-    }
-    var takeMeds = result as TakeMeds;
-    await _handleConsumeResult(takeMeds);
+    if (result == null || !context.mounted) return;
+    await _handleConsumeResult(ref, result);
   }
 
-  Future<void> _handleConsumeResult(TakeMeds takeMeds) async {
+  Future<void> _handleConsumeResult(WidgetRef ref, TakeMeds takeMeds) async {
     if (takeMeds.action == TakeMedsAction.startActiveMeds) {
-      setState(() {
-        activeMeds.add(takeMeds.medsToTake);
-        activeMeds.remove(takeMeds.medsToResolve);
-      });
+      final current = List<ActiveMeds>.from(
+        ref.read(activeMedsProvider).valueOrNull ?? [],
+      );
+      current.add(takeMeds.medsToTake);
+      current.remove(takeMeds.medsToResolve);
+      await ref.read(activeMedsProvider.notifier).save(current);
     }
-
-    Database.saveActiveMeds(activeMeds);
     await Notifications.scheduleAlarm(takeMeds.medsToTake);
   }
 }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:take_your_meds/home.dart';
-import 'package:take_your_meds/notifications.dart';
-import 'db.dart';
-import 'meds.dart';
 import 'dose.dart';
+import 'meds.dart';
 
 class TYMNavigation extends StatefulWidget {
   const TYMNavigation({super.key, required this.pageIndex});
@@ -26,9 +24,7 @@ class _TYMNavigationState extends State<TYMNavigation> {
   Widget build(BuildContext context) {
     return NavigationBar(
       onDestinationSelected: (int index) {
-        if (index == currentPageIndex) {
-          return;
-        }
+        if (index == currentPageIndex) return;
         setState(() {
           currentPageIndex = index;
         });
@@ -36,41 +32,25 @@ class _TYMNavigationState extends State<TYMNavigation> {
         if (currentPageIndex == 0) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => Home(
-                doses: Database.cachedDoses,
-                activeMeds: Database.cachedActiveMeds,
-                location: Notifications.location,
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const Home()),
           );
         }
         if (currentPageIndex == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => MedsOverview(
-                meds: Database.cachedMeds,
-                doses: Database.cachedDoses,
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const MedsOverview()),
           );
         }
         if (currentPageIndex == 2) {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => DosePresetsOverview(
-                meds: Database.cachedMeds,
-                doses: Database.cachedDoses,
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const DosePresetsOverview()),
           );
         }
       },
       indicatorColor: Colors.blueGrey,
       selectedIndex: currentPageIndex,
-      destinations: <Widget>[
+      destinations: const <Widget>[
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.two_mp_rounded), label: 'Meds'),
         NavigationDestination(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
-import 'db.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:take_your_meds/providers.dart';
 import 'meds.dart';
 import 'navigation.dart';
 
@@ -40,6 +41,7 @@ class DoseCard extends StatelessWidget {
   });
   final DosePreset dosePreset;
   final DosePresetChangedCallback doseRemovedCallback;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -53,10 +55,10 @@ class DoseCard extends StatelessWidget {
               Text(
                 '${dosePreset.meds.name} ${dosePreset.dosage}${dosePreset.range.name}',
               ),
-              Spacer(),
+              const Spacer(),
               ElevatedButton(
                 onPressed: () => doseRemovedCallback(dosePreset),
-                child: Text('Del'),
+                child: const Text('Del'),
               ),
             ],
           ),
@@ -66,34 +68,17 @@ class DoseCard extends StatelessWidget {
   }
 }
 
-class DosePresetsOverview extends StatefulWidget {
-  const DosePresetsOverview({
-    super.key,
-    required this.meds,
-    required this.doses,
-  });
-  final List<Meds> meds;
-  final List<DosePreset> doses;
+class DosePresetsOverview extends ConsumerWidget {
+  const DosePresetsOverview({super.key});
 
   @override
-  State<StatefulWidget> createState() => _DosePresetsOverviewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final meds = ref.watch(medsProvider).valueOrNull ?? [];
+    final doses = ref.watch(dosesProvider).valueOrNull ?? [];
 
-class _DosePresetsOverviewState extends State<DosePresetsOverview> {
-  _DosePresetsOverviewState();
-  List<DosePreset> doses = List.empty(growable: true);
-
-  @override
-  void initState() {
-    super.initState();
-    doses.addAll(widget.doses);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Dose List',
           textAlign: TextAlign.center,
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -104,42 +89,39 @@ class _DosePresetsOverviewState extends State<DosePresetsOverview> {
           return Column(
             children: [
               AnimatedSize(
-                duration: Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 300),
                 curve: Curves.ease,
                 child: SizedBox(
                   width: 500,
                   height: isKeyboardVisible ? 50 : 300,
                   child: ListView.builder(
+                    itemCount: doses.length,
                     itemBuilder: (BuildContext context, int index) {
                       if (doses.isEmpty) {
-                        return SizedBox(
+                        return const SizedBox(
                           height: 50,
                           child: Text('Add some new meds!'),
                         );
                       }
                       return DoseCard(
                         dosePreset: doses[index],
-                        doseRemovedCallback: (delMeds) {
-                          setState(() {
-                            doses.remove(delMeds);
-                          });
-                          Database.saveDoses(doses);
+                        doseRemovedCallback: (delDose) {
+                          final updated = List<DosePreset>.from(doses)
+                            ..remove(delDose);
+                          ref.read(dosesProvider.notifier).save(updated);
                         },
                       );
                     },
-                    itemCount: doses.length,
                   ),
                 ),
               ),
               Flexible(
                 child: CreateDosePresetWidget(
-                  meds: widget.meds,
-                  doses: widget.doses,
+                  meds: meds,
+                  doses: doses,
                   dosePresetChangedCallback: (newDose) {
-                    setState(() {
-                      doses.add(newDose);
-                    });
-                    Database.saveDoses(doses);
+                    final updated = List<DosePreset>.from(doses)..add(newDose);
+                    ref.read(dosesProvider.notifier).save(updated);
                   },
                 ),
               ),
@@ -147,7 +129,7 @@ class _DosePresetsOverviewState extends State<DosePresetsOverview> {
           );
         },
       ),
-      bottomNavigationBar: TYMNavigation(pageIndex: 2),
+      bottomNavigationBar: const TYMNavigation(pageIndex: 2),
     );
   }
 }
@@ -207,18 +189,15 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
             spacing: 50,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Align(
+              const Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Select meds'),
               ),
-
               DropdownButton<Meds>(
                 items: dropDownItems,
                 value: selectedMed,
                 onChanged: (med) => setState(() {
-                  if (med != null) {
-                    selectedMed = med;
-                  }
+                  if (med != null) selectedMed = med;
                 }),
               ),
             ],
@@ -260,10 +239,9 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
               setState(() {
                 doses.add(dosePreset);
               });
-              Database.saveDoses(doses);
               widget.dosePresetChangedCallback(dosePreset);
             },
-            child: Text('Save Dose'),
+            child: const Text('Save Dose'),
           ),
         ],
       ),
