@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:take_your_meds/dose_presets_overview.dart';
 import 'package:take_your_meds/home.dart';
-import 'dose.dart';
-import 'meds.dart';
+import 'package:take_your_meds/meds_overview.dart';
 
 class TYMNavigation extends StatefulWidget {
   const TYMNavigation({super.key, required this.pageIndex});

@@ -1,113 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:take_your_meds/dose.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
+import 'package:take_your_meds/models/meds.dart';
+import 'package:take_your_meds/navigation.dart';
 import 'package:take_your_meds/providers.dart';
-import 'package:take_your_meds/settings.dart';
-import 'package:take_your_meds/time.dart';
-import 'package:timezone/timezone.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'navigation.dart';
-import 'notifications.dart';
-
-enum MedsDoseRange { ug, mg, g }
-
-class Meds {
-  Meds({
-    required this.name,
-    required this.id,
-    required this.range,
-    required this.duration,
-  });
-  final String name;
-  final String id;
-  final MedsDoseRange range;
-  final Duration duration;
-
-  Meds.none()
-    : name = 'None',
-      id = UniqueKey().toString(),
-      range = MedsDoseRange.ug,
-      duration = Duration();
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is Meds && other.id == id;
-
-  @override
-  int get hashCode => id.hashCode;
-}
-
-class ActiveMeds {
-  ActiveMeds({
-    required this.id,
-    required this.meds,
-    required this.dose,
-    required this.takenAt,
-    required this.remindAt,
-    required this.remindAgainAt,
-  });
-
-  ActiveMeds.none()
-    : id = 'None',
-      meds = Meds.none(),
-      dose = DosePreset(id: 'none', name: 'None', meds: Meds.none(), dosage: 0),
-      takenAt = DateTime.fromMillisecondsSinceEpoch(0),
-      remindAt = DateTime.fromMillisecondsSinceEpoch(1000),
-      remindAgainAt = DateTime.fromMillisecondsSinceEpoch(2000);
-
-  ActiveMeds.fromDose(this.dose, DateTime takenAt)
-    : id = UniqueKey().toString(),
-      meds = dose.meds,
-      takenAt = takenAt.toUtc(),
-      remindAt = Time.getRemindAt(dose.meds.duration),
-      remindAgainAt = Time.getRemindAgainAt(
-        Time.getRemindAt(dose.meds.duration),
-        Duration(minutes: Settings.remindAgainAtFrequencyInMins.currentValue),
-      );
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is ActiveMeds && other.id == id;
-
-  final String id;
-  final Meds meds;
-  final DosePreset dose;
-  final DateTime takenAt;
-  final DateTime remindAt;
-  final DateTime remindAgainAt;
-
-  String getLabel() {
-    return '${meds.name} ${dose.dosage}${dose.range.name} ${DateFormat.Hm().format(TZDateTime.from(remindAt, Notifications.location))}';
-  }
-
-  @override
-  int get hashCode => id.hashCode;
-}
-
-enum TakeMedsTimerResolution { none, keepReminder, clearReminder }
-
-enum TakeMedsAction { none, startActiveMeds }
-
-class TakeMeds {
-  TakeMeds({
-    required this.id,
-    required this.medsToTake,
-    required this.medsToResolve,
-    required this.timerResolution,
-    required this.action,
-  });
-
-  final String id;
-  ActiveMeds medsToTake;
-  ActiveMeds? medsToResolve;
-  late TakeMedsTimerResolution timerResolution;
-  late TakeMedsAction action;
-}
 
 typedef MedsChangedCallback = void Function(Meds meds);
 
@@ -303,7 +201,6 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   @override
   void didUpdateWidget(covariant CreateMedsWidget oldHome) {
     super.didUpdateWidget(oldHome);
-
     if (widget.editMeds != null && widget.editMeds != oldHome.editMeds) {
       editMeds = widget.editMeds!;
       meds = editMeds;
@@ -334,9 +231,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
           SizedBox(
             width: 300,
             child: TextField(
-              inputFormatters: [
-                FilteringTextInputFormatter.singleLineFormatter,
-              ],
+              inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
               focusNode: widget.focusNode,
               keyboardType: TextInputType.text,
               controller: nameController,
@@ -365,9 +260,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
               SizedBox(
                 width: 100,
                 child: TextField(
-                  inputFormatters: [
-                    FilteringTextInputFormatter.singleLineFormatter,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                   controller: hoursController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(hintText: hoursHintText),
@@ -386,9 +279,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
               SizedBox(
                 width: 100,
                 child: TextField(
-                  inputFormatters: [
-                    FilteringTextInputFormatter.singleLineFormatter,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
                   controller: minsController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(hintText: minsHintText),
@@ -454,47 +345,9 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Radio<MedsDoseRange>(
-          value: value,
-          visualDensity: VisualDensity.compact,
-        ),
+        Radio<MedsDoseRange>(value: value, visualDensity: VisualDensity.compact),
         Text(label),
       ],
-    );
-  }
-}
-
-class ActiveMedsWidget extends StatelessWidget {
-  const ActiveMedsWidget({
-    super.key,
-    required this.activeMeds,
-    required this.location,
-    required this.onTap,
-  });
-  final ActiveMeds activeMeds;
-  final tz.Location location;
-  final Function onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    var t = clampDouble(
-      DateTime.now().difference(activeMeds.remindAt).inSeconds / 30.0,
-      0,
-      1,
-    );
-    var hsv = HSVColor.lerp(
-      HSVColor.fromColor(Colors.white),
-      HSVColor.fromColor(Colors.yellow),
-      t,
-    );
-    final color = hsv != null ? hsv.toColor() : Colors.white;
-
-    return GestureDetector(
-      onTap: () => onTap(),
-      child: Card(
-        shadowColor: color,
-        child: Center(child: Text(activeMeds.getLabel())),
-      ),
     );
   }
 }

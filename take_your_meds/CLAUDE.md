@@ -26,7 +26,7 @@ flutter test
 
 ## Architecture
 
-Take Your Meds is a Flutter app for scheduling medication dose reminders and tracking active doses. No state management library is used — state flows through the widget hierarchy via constructor parameters and callbacks.
+Take Your Meds is a Flutter app for scheduling medication dose reminders and tracking active doses. State is managed with **flutter_riverpod** — `AsyncNotifierProvider` for the three data collections, a `NotifierProvider` for theme mode, and a `StreamProvider<DateTime>` for the 1-second UI tick.
 
 ### Three-tier data model
 
@@ -34,33 +34,55 @@ Take Your Meds is a Flutter app for scheduling medication dose reminders and tra
 2. **`DosePreset`** — links a `Meds` with a specific dosage amount for quick selection
 3. **`ActiveMeds`** — a `DosePreset` dose that was taken, with `takenAt` (UTC), `remindAt`, and `remindAgainAt` timestamps
 
+### File structure
+
+```
+lib/
+  models/
+    meds.dart                 — Meds, MedsDoseRange
+    dose_preset.dart          — DosePreset
+    active_meds.dart          — ActiveMeds, TakeMeds, TakeMedsTimerResolution, TakeMedsAction
+  providers.dart              — all Riverpod providers (theme, tick, meds, doses, activeMeds)
+  db.dart                     — Hive database layer
+  notifications.dart          — alarm & notification scheduling
+  time.dart                   — getRemindAt / getRemindAgainAt helpers
+  settings.dart               — Setting<T> typed wrappers (cancelWarningWithConsumePercentage, remindAgainAtFrequencyInMins)
+  main.dart                   — app entry point, ProviderScope, MyApp (ConsumerWidget)
+  home.dart                   — Home screen, ActiveMedsWidget, theme toggle helpers
+  meds_overview.dart          — MedsOverview, MedsCard, CreateMedsWidget
+  dose_presets_overview.dart  — DosePresetsOverview, DoseCard, CreateDosePresetWidget
+  consume.dart                — Consume dialog (take / resolve a dose)
+  navigation.dart             — TYMNavigation bottom bar
+  hive/                       — auto-generated Hive adapters (do not edit .g.dart files)
+```
+
 ### Key modules
 
-**`lib/db.dart`** — Hive CE database layer with three boxes (`meds`, `dose`, `timers`). Maintains in-memory caches (`cachedMeds`, `cachedDoses`, `cachedActiveMeds`) loaded at startup and updated after every write. All multi-step writes use `boxCollection.transaction()`.
+**`lib/providers.dart`** — central Riverpod hub. `medsProvider`, `dosesProvider`, `activeMedsProvider` are `AsyncNotifierProvider`s whose notifiers call `Database.save*()` and update state. `themeModeProvider` is a sync `NotifierProvider` pre-seeded from `Database.cachedThemeMode`. `tickProvider` is a `StreamProvider<DateTime>` emitting every second (replaces the old manual timer callback).
 
-**`lib/notifications.dart`** — Schedules alarms and notifications. Uses the `alarm` package for device alarm sounds on Android; falls back to `flutter_local_notifications` for standard notifications. Timezone detection is platform-specific: Android uses `FlutterTimezone`, Linux reads `/etc/timezone`.
+**`lib/db.dart`** — Hive CE database with four boxes: `meds`, `dose`, `timers`, `settings`. Caches (`cachedMeds`, `cachedDoses`, `cachedActiveMeds`, `cachedThemeMode`) are loaded once in `init()`. All multi-step writes use `boxCollection.transaction()`. `ThemeMode` is persisted as its int index in the `settings` box.
 
-**`lib/time.dart`** — Runs a 1-second `Timer.periodic()` that fires registered callbacks. Home widget registers/deregisters its tick callback via `didUpdateWidget()` / `deactivate()` — critical for avoiding memory leaks. Also provides `getRemindAt()` and `getRemindAgainAt()` helpers.
+**`lib/notifications.dart`** — Schedules alarms. Uses the `alarm` package for device alarm sounds on Android; falls back to `flutter_local_notifications`. Timezone detection is platform-specific: Android uses `FlutterTimezone`, Linux reads `/etc/timezone`. `Notifications.location` (static) is used by `ActiveMeds.getLabel()` and `Home`.
 
-**`lib/settings.dart`** — Typed `Setting<T>` wrappers. Key values: `cancelWarningWithConsumePercentage` (0.5 — after 50% of reminder duration, med appears eligible for retake) and `remindAgainAtFrequencyInMins` (5).
+**`lib/home.dart`** — `ConsumerWidget`. Watches `dosesProvider`, `activeMedsProvider`, `tickProvider`, and `themeModeProvider`. Theme cycles system → light → dark via an AppBar icon button. `ActiveMedsWidget` (also in this file) color-codes urgency white → yellow via `HSVColor.lerp()` in a 30-second window after `remindAt`.
 
-**`lib/home.dart`** — Main screen. Displays dose preset buttons and active medications with real-time color-coded urgency (white → yellow via `HSVColor.lerp()` in a 30-second window). Dose preset tap → Consume dialog (new dose); active med tap → Consume dialog (resolve/extend); long-press "Active Meds" header → clear all.
-
-**`lib/consume.dart`** — Modal dialog for taking a new dose or resolving/extending an active dose. Returns a `TakeMeds` object.
-
-**`lib/hive/hive_adapters.dart`** — Hive adapter generation annotations. `hive_adapters.g.dart` is auto-generated; do not edit it manually.
+**`lib/consume.dart`** — `ConsumerStatefulWidget` dialog. Reads `dosesProvider` and `activeMedsProvider` in `initState()` (not `build()`) to avoid resetting the user's dropdown selections on each rebuild. Exposes date/time pickers so `takenAt` can be set retroactively; `takenAt` is passed into `ActiveMeds.fromDose()`.
 
 ### Notification/alarm flow
 
-1. User records a dose → `ActiveMeds` created with `takenAt = DateTime.now().toUtc()`
-2. `remindAt = takenAt + meds.duration`
+1. User records a dose → `ActiveMeds.fromDose(dose, takenAt)` created
+2. `remindAt = takenAt + meds.duration` (truncated to the minute)
 3. `remindAgainAt = remindAt + Settings.remindAgainAtFrequencyInMins`
-4. `Notifications.scheduleAlarm(activeMeds)` schedules the device alarm for `remindAt`
+4. `Notifications.scheduleAlarm(activeMeds)` sets the device alarm for `remindAt`
 
 ### Initialization order (in `main.dart`)
 
-`Database.init()` → `Notifications.init()` → `Time.init()` — all awaited before `runApp()`.
+`Database.init()` → `Notifications.init()` — both awaited before `runApp(ProviderScope(...))`. `Time.init()` is no longer called (the tick is handled by `tickProvider`).
 
 ### Time handling
 
-All timestamps stored as UTC. Displayed times converted to local timezone via `TZDateTime.from()` from the `timezone` package.
+All timestamps stored as UTC. Displayed times converted to local timezone via `TZDateTime.from(dt, Notifications.location)` from the `timezone` package.
+
+### Hive adapters
+
+`lib/hive/hive_adapters.dart` declares `@GenerateAdapters` for `Meds`, `DosePreset`, `MedsDoseRange`, and `ActiveMeds`. After moving or modifying any of these classes, re-run `build_runner` to regenerate `hive_adapters.g.dart` and `hive_registrar.g.dart`.

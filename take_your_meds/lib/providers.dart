@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:take_your_meds/db.dart';
-import 'package:take_your_meds/dose.dart';
-import 'package:take_your_meds/meds.dart';
+import 'package:take_your_meds/models/active_meds.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
+import 'package:take_your_meds/models/meds.dart';
 
 class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override

@@ -1,9 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:take_your_meds/consume.dart';
-import 'package:take_your_meds/dose.dart';
-import 'package:take_your_meds/meds.dart';
+import 'package:take_your_meds/models/active_meds.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
 import 'package:take_your_meds/navigation.dart';
 import 'package:take_your_meds/providers.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -201,5 +203,40 @@ class Home extends ConsumerWidget {
       await ref.read(activeMedsProvider.notifier).save(current);
     }
     await Notifications.scheduleAlarm(takeMeds.medsToTake);
+  }
+}
+
+class ActiveMedsWidget extends StatelessWidget {
+  const ActiveMedsWidget({
+    super.key,
+    required this.activeMeds,
+    required this.location,
+    required this.onTap,
+  });
+  final ActiveMeds activeMeds;
+  final tz.Location location;
+  final Function onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = clampDouble(
+      DateTime.now().difference(activeMeds.remindAt).inSeconds / 30.0,
+      0,
+      1,
+    );
+    final hsv = HSVColor.lerp(
+      HSVColor.fromColor(Colors.white),
+      HSVColor.fromColor(Colors.yellow),
+      t,
+    );
+    final color = hsv != null ? hsv.toColor() : Colors.white;
+
+    return GestureDetector(
+      onTap: () => onTap(),
+      child: Card(
+        shadowColor: color,
+        child: Center(child: Text(activeMeds.getLabel())),
+      ),
+    );
   }
 }

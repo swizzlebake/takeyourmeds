@@ -2,46 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
+import 'package:take_your_meds/models/meds.dart';
+import 'package:take_your_meds/navigation.dart';
 import 'package:take_your_meds/providers.dart';
-import 'meds.dart';
-import 'navigation.dart';
 
-class DosePreset {
-  DosePreset({
-    required this.id,
-    required this.name,
-    required this.meds,
-    required this.dosage,
-  }) : range = meds.range;
-  final String id;
-  final String name;
-  final Meds meds;
-  final MedsDoseRange range;
-  final int dosage;
-
-  DosePreset.none()
-    : id = 'none',
-      name = 'None',
-      meds = Meds.none(),
-      range = MedsDoseRange.ug,
-      dosage = 0;
-
-  String getLabel() {
-    return '${meds.name} $dosage${range.name}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    // TODO: implement ==
-    return (other is DosePreset) ? (id == other.id) : false;
-  }
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => id.hashCode;
-}
-
-typedef DosePresetChangedCallback = void Function(DosePreset meds);
+typedef DosePresetChangedCallback = void Function(DosePreset dose);
 
 class DoseCard extends StatelessWidget {
   const DoseCard({
@@ -190,9 +156,9 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
       child: Column(
         spacing: 20,
         children: [
-          Text(
+          const Text(
             'Add New Dose',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           Row(
             spacing: 50,
@@ -224,12 +190,8 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(hintText: 'dose'),
                     onChanged: (txt) {
-                      var tryDose = int.tryParse(txt);
-                      if (tryDose != null) {
-                        setState(() {
-                          dose = tryDose;
-                        });
-                      }
+                      final tryDose = int.tryParse(txt);
+                      if (tryDose != null) setState(() => dose = tryDose);
                     },
                   ),
                 ),
@@ -247,9 +209,7 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
                       meds: selectedMed!,
                       dosage: dose,
                     );
-                    setState(() {
-                      doses.add(dosePreset);
-                    });
+                    setState(() => doses.add(dosePreset));
                     widget.dosePresetChangedCallback(dosePreset);
                   },
             child: const Text('Save Dose'),

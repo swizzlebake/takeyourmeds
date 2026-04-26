@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:take_your_meds/dose.dart';
-import 'package:take_your_meds/meds.dart';
+import 'package:take_your_meds/models/active_meds.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
 import 'package:take_your_meds/providers.dart';
 import 'package:take_your_meds/settings.dart';
 

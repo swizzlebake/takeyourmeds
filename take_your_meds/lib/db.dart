@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:take_your_meds/dose.dart';
 import 'package:take_your_meds/hive/hive_registrar.g.dart';
-import 'meds.dart';
+import 'package:take_your_meds/models/active_meds.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
+import 'package:take_your_meds/models/meds.dart';
 
 class Database {
   Database();
