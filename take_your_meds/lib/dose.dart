@@ -54,24 +54,20 @@ class DoseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: Card(
-        elevation: 0.5,
-        child: Padding(
-          padding: EdgeInsetsGeometry.all(5),
-          child: Row(
-            children: [
-              Text(
-                '${dosePreset.meds.name} ${dosePreset.dosage}${dosePreset.range.name}',
-              ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: () => doseRemovedCallback(dosePreset),
-                child: const Text('Del'),
-              ),
-            ],
-          ),
+    return Card.outlined(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Text(
+              '${dosePreset.meds.name} ${dosePreset.dosage}${dosePreset.range.name}',
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () => doseRemovedCallback(dosePreset),
+              child: const Text('X'),
+            ),
+          ],
         ),
       ),
     );
@@ -190,10 +186,14 @@ class _CreateDosePresetWidgetState extends State<CreateDosePresetWidget> {
       dropDownItems.add(DropdownMenuItem(value: med, child: Text(med.name)));
     }
 
-    return Card(
+    return Card.filled(
       child: Column(
         spacing: 20,
         children: [
+          Text(
+            'Add New Dose',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           Row(
             spacing: 50,
             mainAxisAlignment: MainAxisAlignment.center,

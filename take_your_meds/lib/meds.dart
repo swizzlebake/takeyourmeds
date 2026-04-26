@@ -126,46 +126,39 @@ class MedsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 60,
+    return Card.outlined(
       child: GestureDetector(
         onTap: () => medsTappedCallback(meds),
-        child: Card(
-          elevation: 0.5,
-          child: Padding(
-            padding: EdgeInsetsGeometry.all(2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    text: '',
-                    children: <TextSpan>[
-                      TextSpan(
-                        text: meds.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(text: ' dosage: '),
-                      TextSpan(
-                        text: meds.range.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const TextSpan(text: ' lasts: '),
-                      TextSpan(
-                        text:
-                            '${duration.inHours}h ${duration.inMinutes % 60}m',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                    style: const TextStyle(color: Colors.black),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Text.rich(
+                TextSpan(
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: meds.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const TextSpan(text: ' dosage: '),
+                    TextSpan(
+                      text: meds.range.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const TextSpan(text: ' lasts: '),
+                    TextSpan(
+                      text: '${duration.inHours}h ${duration.inMinutes % 60}m',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: () => medsRemovedCallback(meds),
-                  child: const Text("X"),
-                ),
-              ],
-            ),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                onPressed: () => medsRemovedCallback(meds),
+                child: const Text('X'),
+              ),
+            ],
           ),
         ),
       ),
