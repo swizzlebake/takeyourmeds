@@ -10,6 +10,27 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'notifications.dart';
 
+IconData _themeModeIcon(ThemeMode mode) => switch (mode) {
+  ThemeMode.system => Icons.brightness_auto,
+  ThemeMode.light => Icons.light_mode,
+  ThemeMode.dark => Icons.dark_mode,
+};
+
+String _themeModeLabel(ThemeMode mode) => switch (mode) {
+  ThemeMode.system => 'System theme',
+  ThemeMode.light => 'Light theme',
+  ThemeMode.dark => 'Dark theme',
+};
+
+void _cycleTheme(WidgetRef ref) {
+  final next = switch (ref.read(themeModeProvider)) {
+    ThemeMode.system => ThemeMode.light,
+    ThemeMode.light => ThemeMode.dark,
+    ThemeMode.dark => ThemeMode.system,
+  };
+  ref.read(themeModeProvider.notifier).set(next);
+}
+
 class Home extends ConsumerWidget {
   const Home({super.key});
 
@@ -29,6 +50,13 @@ class Home extends ConsumerWidget {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(_themeModeIcon(ref.watch(themeModeProvider))),
+            tooltip: _themeModeLabel(ref.watch(themeModeProvider)),
+            onPressed: () => _cycleTheme(ref),
+          ),
+        ],
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -133,7 +161,10 @@ class Home extends ConsumerWidget {
       context: context,
       builder: (BuildContext context) {
         return Consume(
-          selectedActiveMedsToTake: ActiveMeds.fromDose(dose, DateTime.now().toUtc()),
+          selectedActiveMedsToTake: ActiveMeds.fromDose(
+            dose,
+            DateTime.now().toUtc(),
+          ),
           selectedActiveMedsToResolve: null,
         );
       },

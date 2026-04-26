@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:take_your_meds/dose.dart';
 import 'package:take_your_meds/hive/hive_registrar.g.dart';
@@ -9,9 +10,11 @@ class Database {
   static late CollectionBox<Meds> medsBox;
   static late CollectionBox<DosePreset> doseBox;
   static late CollectionBox<ActiveMeds> activeMedsBox;
+  static late CollectionBox<int> settingsBox;
   static late List<Meds> cachedMeds;
   static late List<DosePreset> cachedDoses;
   static late List<ActiveMeds> cachedActiveMeds;
+  static late ThemeMode cachedThemeMode;
 
   static Future<void> init() async {
     await Hive.initFlutter('./tym');
@@ -19,11 +22,17 @@ class Database {
       'meds',
       'dose',
       'timers',
+      'settings',
     }, path: './tym');
     Hive.registerAdapters();
     medsBox = await boxCollection.openBox('meds');
     doseBox = await boxCollection.openBox('dose');
     activeMedsBox = await boxCollection.openBox('timers');
+    settingsBox = await boxCollection.openBox('settings');
+    final themeModeIndex = await settingsBox.get('themeMode');
+    cachedThemeMode = themeModeIndex != null
+        ? ThemeMode.values[themeModeIndex]
+        : ThemeMode.system;
 
     cachedMeds = await getMeds();
     cachedDoses = await getDoses();
@@ -94,5 +103,10 @@ class Database {
       }
     }
     return finalMeds;
+  }
+
+  static Future<void> saveThemeMode(ThemeMode mode) async {
+    await settingsBox.put('themeMode', mode.index);
+    cachedThemeMode = mode;
   }
 }

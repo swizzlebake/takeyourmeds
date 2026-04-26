@@ -1,7 +1,22 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:take_your_meds/db.dart';
 import 'package:take_your_meds/dose.dart';
 import 'package:take_your_meds/meds.dart';
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => Database.cachedThemeMode;
+
+  Future<void> set(ThemeMode mode) async {
+    await Database.saveThemeMode(mode);
+    state = mode;
+  }
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
 
 final tickProvider = StreamProvider<DateTime>((ref) {
   return Stream.periodic(const Duration(seconds: 1), (_) => DateTime.now());
