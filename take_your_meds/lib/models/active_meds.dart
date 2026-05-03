@@ -24,18 +24,17 @@ class ActiveMeds {
   ActiveMeds.none()
     : id = 'None',
       meds = Meds.none(),
-      dose = DosePreset(id: 'none', name: 'None', meds: Meds.none(), dosage: 0),
+      dose = DosePreset(id: 'none', dosage: 0),
       takenAt = DateTime.fromMillisecondsSinceEpoch(0),
       remindAt = DateTime.fromMillisecondsSinceEpoch(1000),
       remindAgainAt = DateTime.fromMillisecondsSinceEpoch(2000);
 
-  ActiveMeds.fromDose(this.dose, DateTime takenAt)
+  ActiveMeds.fromDose(this.meds, this.dose, DateTime takenAt)
     : id = UniqueKey().toString(),
-      meds = dose.meds,
       takenAt = takenAt.toUtc(),
-      remindAt = Time.getRemindAt(dose.meds.duration),
+      remindAt = Time.getRemindAt(meds.duration),
       remindAgainAt = Time.getRemindAgainAt(
-        Time.getRemindAt(dose.meds.duration),
+        Time.getRemindAt(meds.duration),
         Duration(minutes: Settings.remindAgainAtFrequencyInMins.currentValue),
       );
 
@@ -51,7 +50,7 @@ class ActiveMeds {
   final DateTime remindAgainAt;
 
   String getLabel() {
-    return '${meds.name} ${dose.dosage}${dose.range.name} ${DateFormat.Hm().format(TZDateTime.from(remindAt, Notifications.location))}';
+    return '${meds.name} ${dose.dosage}${meds.range.name} ${DateFormat.Hm().format(TZDateTime.from(remindAt, Notifications.location))}';
   }
 
   @override

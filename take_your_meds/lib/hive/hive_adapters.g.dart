@@ -18,8 +18,6 @@ class DosePresetAdapter extends TypeAdapter<DosePreset> {
     };
     return DosePreset(
       id: fields[3] as String,
-      name: fields[0] as String,
-      meds: fields[1] as Meds,
       dosage: (fields[2] as num).toInt(),
     );
   }
@@ -27,11 +25,7 @@ class DosePresetAdapter extends TypeAdapter<DosePreset> {
   @override
   void write(BinaryWriter writer, DosePreset obj) {
     writer
-      ..writeByte(4)
-      ..writeByte(0)
-      ..write(obj.name)
-      ..writeByte(1)
-      ..write(obj.meds)
+      ..writeByte(2)
       ..writeByte(2)
       ..write(obj.dosage)
       ..writeByte(3)
@@ -64,13 +58,16 @@ class MedsAdapter extends TypeAdapter<Meds> {
       id: fields[1] as String,
       range: fields[2] as MedsDoseRange,
       duration: fields[3] as Duration,
+      doses: fields[4] == null
+          ? const []
+          : (fields[4] as List).cast<DosePreset>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Meds obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -78,7 +75,9 @@ class MedsAdapter extends TypeAdapter<Meds> {
       ..writeByte(2)
       ..write(obj.range)
       ..writeByte(3)
-      ..write(obj.duration);
+      ..write(obj.duration)
+      ..writeByte(4)
+      ..write(obj.doses);
   }
 
   @override

@@ -7,17 +7,13 @@ types:
     typeId: 1
     nextIndex: 4
     fields:
-      name:
-        index: 0
-      meds:
-        index: 1
       dosage:
         index: 2
       id:
         index: 3
   Meds:
     typeId: 2
-    nextIndex: 4
+    nextIndex: 5
     fields:
       name:
         index: 0
@@ -27,6 +23,8 @@ types:
         index: 2
       duration:
         index: 3
+      doses:
+        index: 4
   MedsDoseRange:
     typeId: 3
     nextIndex: 3

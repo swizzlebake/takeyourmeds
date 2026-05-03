@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:take_your_meds/dose_presets_overview.dart';
 import 'package:take_your_meds/home.dart';
 import 'package:take_your_meds/meds_overview.dart';
 
@@ -41,24 +40,12 @@ class _TYMNavigationState extends State<TYMNavigation> {
             MaterialPageRoute(builder: (context) => const MedsOverview()),
           );
         }
-        if (currentPageIndex == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DosePresetsOverview(),
-            ),
-          );
-        }
       },
       indicatorColor: Colors.blueGrey,
       selectedIndex: currentPageIndex,
       destinations: const <Widget>[
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.two_mp_rounded), label: 'Meds'),
-        NavigationDestination(
-          icon: Icon(Icons.doorbell_outlined),
-          label: 'Presets',
-        ),
       ],
     );
   }

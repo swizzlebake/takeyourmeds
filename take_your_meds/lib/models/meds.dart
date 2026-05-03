@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:take_your_meds/models/dose_preset.dart';
 
 enum MedsDoseRange { ug, mg, g }
 
@@ -8,17 +9,20 @@ class Meds {
     required this.id,
     required this.range,
     required this.duration,
+    this.doses = const [],
   });
   final String name;
   final String id;
   final MedsDoseRange range;
   final Duration duration;
+  final List<DosePreset> doses;
 
   Meds.none()
     : name = 'None',
       id = UniqueKey().toString(),
       range = MedsDoseRange.ug,
-      duration = Duration();
+      duration = Duration(),
+      doses = const [];
 
   @override
   bool operator ==(Object other) =>

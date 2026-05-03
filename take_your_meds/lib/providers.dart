@@ -37,19 +37,15 @@ final medsProvider = AsyncNotifierProvider<MedsNotifier, List<Meds>>(
   MedsNotifier.new,
 );
 
-class DosesNotifier extends AsyncNotifier<List<DosePreset>> {
-  @override
-  Future<List<DosePreset>> build() => Database.getDoses();
+typedef MedsDosePair = ({Meds meds, DosePreset dose});
 
-  Future<void> save(List<DosePreset> doses) async {
-    await Database.saveDoses(doses);
-    state = AsyncValue.data(List.from(doses));
-  }
-}
-
-final dosesProvider = AsyncNotifierProvider<DosesNotifier, List<DosePreset>>(
-  DosesNotifier.new,
-);
+final medsDosePairsProvider = Provider<List<MedsDosePair>>((ref) {
+  final meds = ref.watch(medsProvider).valueOrNull ?? const [];
+  return [
+    for (final m in meds)
+      for (final d in m.doses) (meds: m, dose: d),
+  ];
+});
 
 class ActiveMedsNotifier extends AsyncNotifier<List<ActiveMeds>> {
   @override

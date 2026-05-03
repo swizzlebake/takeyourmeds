@@ -48,6 +48,11 @@ class MedsCard extends StatelessWidget {
                       text: '${duration.inHours}h ${duration.inMinutes % 60}m',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    const TextSpan(text: ' doses: '),
+                    TextSpan(
+                      text: '${meds.doses.length}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
@@ -78,7 +83,6 @@ class _MedsOverviewState extends ConsumerState<MedsOverview> {
   @override
   Widget build(BuildContext context) {
     final meds = ref.watch(medsProvider).valueOrNull ?? [];
-    final doses = ref.watch(dosesProvider).valueOrNull ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -115,10 +119,7 @@ class _MedsOverviewState extends ConsumerState<MedsOverview> {
                         medsRemovedCallback: (delMeds) {
                           final updatedMeds = List<Meds>.from(meds)
                             ..remove(delMeds);
-                          final updatedDoses = List<DosePreset>.from(doses)
-                            ..removeWhere((d) => d.meds.id == delMeds.id);
                           ref.read(medsProvider.notifier).save(updatedMeds);
-                          ref.read(dosesProvider.notifier).save(updatedDoses);
                         },
                       );
                     },
@@ -130,9 +131,16 @@ class _MedsOverviewState extends ConsumerState<MedsOverview> {
                   focusNode: focusNode,
                   editMeds: editMeds,
                   medsChangedCallback: (newMeds) {
+                    final cleaned = Meds(
+                      name: newMeds.name,
+                      id: newMeds.id,
+                      range: newMeds.range,
+                      duration: newMeds.duration,
+                      doses: List<DosePreset>.from(newMeds.doses),
+                    );
                     final updated = List<Meds>.from(meds)
-                      ..removeWhere((m) => m.id == newMeds.id)
-                      ..add(newMeds);
+                      ..removeWhere((m) => m.id == cleaned.id)
+                      ..add(cleaned);
                     ref.read(medsProvider.notifier).save(updated);
                     setState(() {
                       editMeds = null;
@@ -179,15 +187,19 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
   int durationMins = 0;
   String hoursHintText = 'hours';
   String minsHintText = 'minutes';
+  List<DosePreset> doses = [];
+  int newDoseAmount = 0;
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController hoursController = TextEditingController();
   final TextEditingController minsController = TextEditingController();
+  final TextEditingController newDoseController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     editMeds = widget.editMeds ?? Meds.none();
+    doses = List<DosePreset>.from(editMeds.doses);
   }
 
   @override
@@ -195,6 +207,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     nameController.dispose();
     hoursController.dispose();
     minsController.dispose();
+    newDoseController.dispose();
     super.dispose();
   }
 
@@ -204,6 +217,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     if (widget.editMeds != null && widget.editMeds != oldHome.editMeds) {
       editMeds = widget.editMeds!;
       meds = editMeds;
+      doses = List<DosePreset>.from(editMeds.doses);
       updateFields();
     }
   }
@@ -216,102 +230,162 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     nameController.text = nameText;
     hoursController.text = durationHours.toString();
     minsController.text = durationMins.toString();
+    newDoseController.clear();
+    newDoseAmount = 0;
   }
 
   @override
   Widget build(BuildContext context) {
     return Card.filled(
-      child: Column(
-        spacing: 10,
-        children: <Widget>[
-          Text(
-            widget.editMeds != null ? 'Edit Meds' : 'Add New Meds',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          SizedBox(
-            width: 300,
-            child: TextField(
-              inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-              focusNode: widget.focusNode,
-              keyboardType: TextInputType.text,
-              controller: nameController,
-              decoration: const InputDecoration(hintText: 'name'),
-              onChanged: (txt) {
-                nameText = txt;
-                updateState();
-              },
+      child: SingleChildScrollView(
+        child: Column(
+          spacing: 10,
+          children: <Widget>[
+            Text(
+              widget.editMeds != null ? 'Edit Meds' : 'Add New Meds',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-          ),
-          RadioGroup<MedsDoseRange>(
-            groupValue: doseRange,
-            onChanged: updateDoseRangeRadioSelection,
-            child: Row(
+            SizedBox(
+              width: 300,
+              child: TextField(
+                inputFormatters: [
+                  FilteringTextInputFormatter.singleLineFormatter,
+                ],
+                focusNode: widget.focusNode,
+                keyboardType: TextInputType.text,
+                controller: nameController,
+                decoration: const InputDecoration(hintText: 'name'),
+                onChanged: (txt) {
+                  nameText = txt;
+                  updateState();
+                },
+              ),
+            ),
+            RadioGroup<MedsDoseRange>(
+              groupValue: doseRange,
+              onChanged: updateDoseRangeRadioSelection,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _doseOption('ug', MedsDoseRange.ug),
+                  _doseOption('mg', MedsDoseRange.mg),
+                  _doseOption('g', MedsDoseRange.g),
+                ],
+              ),
+            ),
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _doseOption('ug', MedsDoseRange.ug),
-                _doseOption('mg', MedsDoseRange.mg),
-                _doseOption('g', MedsDoseRange.g),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    inputFormatters: [
+                      FilteringTextInputFormatter.singleLineFormatter,
+                    ],
+                    controller: hoursController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: hoursHintText),
+                    onChanged: (txt) {
+                      final hasDot = '.'.allMatches(txt).length == 1;
+                      final hasComma = ','.allMatches(txt).length == 1;
+                      if (hasDot || hasComma) return;
+                      final tryDuration = int.tryParse(txt);
+                      if (tryDuration != null) durationHours = tryDuration;
+                      updateState();
+                    },
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Text('h'),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    inputFormatters: [
+                      FilteringTextInputFormatter.singleLineFormatter,
+                    ],
+                    controller: minsController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: minsHintText),
+                    onChanged: (txt) {
+                      final hasDot = '.'.allMatches(txt).length == 1;
+                      final hasComma = ','.allMatches(txt).length == 1;
+                      if (hasDot || hasComma) return;
+                      final tryDuration = int.tryParse(txt);
+                      if (tryDuration != null) durationMins = tryDuration;
+                      updateState();
+                    },
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Text('m'),
               ],
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 100,
-                child: TextField(
-                  inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                  controller: hoursController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(hintText: hoursHintText),
-                  onChanged: (txt) {
-                    final hasDot = '.'.allMatches(txt).length == 1;
-                    final hasComma = ','.allMatches(txt).length == 1;
-                    if (hasDot || hasComma) return;
-                    final tryDuration = int.tryParse(txt);
-                    if (tryDuration != null) durationHours = tryDuration;
-                    updateState();
-                  },
-                  textAlign: TextAlign.center,
-                ),
+            const Text('Doses', style: TextStyle(fontWeight: FontWeight.bold)),
+            for (final dose in doses)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      '${dose.dosage}${doseRange.name}',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Remove dose',
+                    onPressed: () {
+                      setState(() {
+                        doses.removeWhere((d) => d.id == dose.id);
+                      });
+                      updateState();
+                    },
+                  ),
+                ],
               ),
-              const Text('h'),
-              SizedBox(
-                width: 100,
-                child: TextField(
-                  inputFormatters: [FilteringTextInputFormatter.singleLineFormatter],
-                  controller: minsController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(hintText: minsHintText),
-                  onChanged: (txt) {
-                    final hasDot = '.'.allMatches(txt).length == 1;
-                    final hasComma = ','.allMatches(txt).length == 1;
-                    if (hasDot || hasComma) return;
-                    final tryDuration = int.tryParse(txt);
-                    if (tryDuration != null) durationMins = tryDuration;
-                    updateState();
-                  },
-                  textAlign: TextAlign.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    controller: newDoseController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(hintText: 'dose'),
+                    onChanged: (txt) {
+                      final tryDose = int.tryParse(txt);
+                      newDoseAmount = tryDose ?? 0;
+                    },
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              const Text('m'),
-            ],
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                meds = Meds.none();
-                editMeds = Meds.none();
-              });
-              updateFields();
-            },
-            child: Text(widget.editMeds != null ? 'Cancel' : 'Clear'),
-          ),
-          ElevatedButton(
-            onPressed: onAddPressed,
-            child: Text(widget.editMeds != null ? 'Save Meds' : 'Add Meds'),
-          ),
-        ],
+                Text(doseRange.name),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add dose',
+                  onPressed: onAddDosePressed,
+                ),
+              ],
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  meds = Meds.none();
+                  editMeds = Meds.none();
+                  doses = [];
+                });
+                updateFields();
+              },
+              child: Text(widget.editMeds != null ? 'Cancel' : 'Clear'),
+            ),
+            ElevatedButton(
+              onPressed: onAddPressed,
+              child: Text(widget.editMeds != null ? 'Save Meds' : 'Add Meds'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -321,11 +395,22 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     updateState();
   }
 
+  void onAddDosePressed() {
+    if (newDoseAmount <= 0) return;
+    setState(() {
+      doses.add(DosePreset(id: UniqueKey().toString(), dosage: newDoseAmount));
+      newDoseController.clear();
+      newDoseAmount = 0;
+    });
+    updateState();
+  }
+
   void onAddPressed() {
     widget.medsChangedCallback(meds);
     setState(() {
       meds = Meds.none();
       editMeds = Meds.none();
+      doses = [];
     });
     updateFields();
   }
@@ -337,6 +422,7 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
         id: meds.id,
         range: doseRange,
         duration: Duration(hours: durationHours, minutes: durationMins),
+        doses: doses,
       );
     });
   }
@@ -345,7 +431,10 @@ class _CreateMedsWidgetState extends State<CreateMedsWidget> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Radio<MedsDoseRange>(value: value, visualDensity: VisualDensity.compact),
+        Radio<MedsDoseRange>(
+          value: value,
+          visualDensity: VisualDensity.compact,
+        ),
         Text(label),
       ],
     );

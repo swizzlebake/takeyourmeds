@@ -23,21 +23,25 @@ class _ConsumeState extends ConsumerState<Consume> {
   late TakeMeds takeMeds;
   final List<DropdownMenuEntry<DosePreset>> _doseEntries = [];
   final List<DropdownMenuEntry<ActiveMeds>> _activeMedEntries = [];
+  late List<MedsDosePair> _pairs;
   DateTime takenAt = DateTime.now().toUtc();
 
   @override
   void initState() {
     super.initState();
-    final doses = ref.read(dosesProvider).valueOrNull ?? [];
+    _pairs = ref.read(medsDosePairsProvider);
     final activeMeds = ref.read(activeMedsProvider).valueOrNull ?? [];
 
-    for (var dose in doses) {
+    for (final p in _pairs) {
       _doseEntries.add(
-        DropdownMenuEntry<DosePreset>(value: dose, label: dose.getLabel()),
+        DropdownMenuEntry<DosePreset>(
+          value: p.dose,
+          label: p.dose.getLabel(p.meds),
+        ),
       );
     }
     _buildActiveMeds(activeMeds);
-    _buildTakeMeds(doses, activeMeds);
+    _buildTakeMeds(_pairs, activeMeds);
   }
 
   void _buildTimePicker(BuildContext context) async {
@@ -70,17 +74,22 @@ class _ConsumeState extends ConsumerState<Consume> {
     }
   }
 
-  void _buildTakeMeds(List<DosePreset> doses, List<ActiveMeds> activeMeds) {
+  void _buildTakeMeds(List<MedsDosePair> pairs, List<ActiveMeds> activeMeds) {
     var medsToTake = widget.selectedActiveMedsToTake;
     var medsToResolve = widget.selectedActiveMedsToResolve;
 
     if (medsToTake == null && medsToResolve != null) {
-      for (var dose in doses) {
-        if (dose.meds.id == medsToResolve.meds.id) {
-          medsToTake = ActiveMeds.fromDose(dose, takenAt);
+      for (final p in pairs) {
+        if (p.meds.id == medsToResolve.meds.id) {
+          medsToTake = ActiveMeds.fromDose(p.meds, p.dose, takenAt);
           break;
         }
       }
+      medsToTake ??= ActiveMeds.fromDose(
+        medsToResolve.meds,
+        medsToResolve.dose,
+        takenAt,
+      );
     }
 
     if (medsToResolve == null && medsToTake != null) {
@@ -170,8 +179,15 @@ class _ConsumeState extends ConsumerState<Consume> {
                 selectOnly: true,
                 onSelected: (DosePreset? dose) {
                   if (dose == null) return;
+                  final parent = _pairs
+                      .firstWhere((p) => p.dose.id == dose.id)
+                      .meds;
                   setState(() {
-                    takeMeds.medsToTake = ActiveMeds.fromDose(dose, takenAt);
+                    takeMeds.medsToTake = ActiveMeds.fromDose(
+                      parent,
+                      dose,
+                      takenAt,
+                    );
                   });
                 },
               ),

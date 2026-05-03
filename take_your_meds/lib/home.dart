@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:take_your_meds/consume.dart';
 import 'package:take_your_meds/models/active_meds.dart';
 import 'package:take_your_meds/models/dose_preset.dart';
+import 'package:take_your_meds/models/meds.dart';
 import 'package:take_your_meds/navigation.dart';
 import 'package:take_your_meds/providers.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -39,7 +40,7 @@ class Home extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tick = ref.watch(tickProvider).valueOrNull ?? DateTime.now();
-    final doses = ref.watch(dosesProvider).valueOrNull ?? [];
+    final pairs = ref.watch(medsDosePairsProvider);
     final activeMeds = List<ActiveMeds>.from(
       ref.watch(activeMedsProvider).valueOrNull ?? [],
     )..sort((a, b) => a.takenAt.compareTo(b.takenAt));
@@ -66,14 +67,20 @@ class Home extends ConsumerWidget {
           SizedBox(
             height: 300,
             child: ListView.builder(
-              itemCount: doses.length,
+              itemCount: pairs.length,
               itemBuilder: (BuildContext context, int index) {
+                final pair = pairs[index];
                 return Card(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _onPressedDosePreset(context, ref, doses[index]);
+                      await _onPressedDosePreset(
+                        context,
+                        ref,
+                        pair.meds,
+                        pair.dose,
+                      );
                     },
-                    child: Text(doses[index].getLabel()),
+                    child: Text(pair.dose.getLabel(pair.meds)),
                   ),
                 );
               },
@@ -157,6 +164,7 @@ class Home extends ConsumerWidget {
   Future<void> _onPressedDosePreset(
     BuildContext context,
     WidgetRef ref,
+    Meds meds,
     DosePreset dose,
   ) async {
     final result = await showDialog<TakeMeds>(
@@ -164,6 +172,7 @@ class Home extends ConsumerWidget {
       builder: (BuildContext context) {
         return Consume(
           selectedActiveMedsToTake: ActiveMeds.fromDose(
+            meds,
             dose,
             DateTime.now().toUtc(),
           ),

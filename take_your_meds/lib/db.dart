@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:take_your_meds/hive/hive_registrar.g.dart';
 import 'package:take_your_meds/models/active_meds.dart';
-import 'package:take_your_meds/models/dose_preset.dart';
 import 'package:take_your_meds/models/meds.dart';
 
 class Database {
   Database();
   static late BoxCollection boxCollection;
   static late CollectionBox<Meds> medsBox;
-  static late CollectionBox<DosePreset> doseBox;
   static late CollectionBox<ActiveMeds> activeMedsBox;
   static late CollectionBox<int> settingsBox;
   static late List<Meds> cachedMeds;
-  static late List<DosePreset> cachedDoses;
   static late List<ActiveMeds> cachedActiveMeds;
   static late ThemeMode cachedThemeMode;
 
@@ -21,13 +18,11 @@ class Database {
     await Hive.initFlutter('./tym');
     boxCollection = await BoxCollection.open('tym', {
       'meds',
-      'dose',
       'timers',
       'settings',
     }, path: './tym');
     Hive.registerAdapters();
     medsBox = await boxCollection.openBox('meds');
-    doseBox = await boxCollection.openBox('dose');
     activeMedsBox = await boxCollection.openBox('timers');
     settingsBox = await boxCollection.openBox('settings');
     final themeModeIndex = await settingsBox.get('themeMode');
@@ -36,7 +31,6 @@ class Database {
         : ThemeMode.system;
 
     cachedMeds = await getMeds();
-    cachedDoses = await getDoses();
     cachedActiveMeds = await getActiveMeds();
   }
 
@@ -60,28 +54,6 @@ class Database {
     });
 
     cachedMeds = await getMeds();
-  }
-
-  static Future<void> saveDoses(List<DosePreset> doses) async {
-    await doseBox.clear();
-    await boxCollection.transaction(() async {
-      for (var dose in doses) {
-        await doseBox.put(dose.id, dose);
-      }
-    });
-
-    cachedDoses = await getDoses();
-  }
-
-  static Future<List<DosePreset>> getDoses() async {
-    var dosages = await doseBox.getAll(await doseBox.getAllKeys());
-    var finalDoses = List<DosePreset>.empty(growable: true);
-    for (var dose in dosages) {
-      if (dose != null) {
-        finalDoses.add(dose);
-      }
-    }
-    return finalDoses;
   }
 
   static Future<void> saveActiveMeds(List<ActiveMeds> activeMeds) async {
